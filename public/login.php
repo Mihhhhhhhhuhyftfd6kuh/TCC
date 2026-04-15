@@ -1,10 +1,10 @@
 <?php
 require '../config/config.php';
-require '../functions/func.php';
+require '../controllers\auth.php';
 
 if($_SERVER['REQUEST_METHOD']){
-    $email =  $_POST['email'];
-    $senha = $_POST['senha'];
+    $email =  $_POST['email'] ?? null;
+    $senha = $_POST['senha']  ?? null;
 
 login($email,$senha);
 

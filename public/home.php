@@ -1,4 +1,14 @@
+<?php
 
+require "../config/config.php";
+require "../controllers/user.php";
+
+$id= $_SESSION['id'];
+echo $id;
+
+
+
+?>
 
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -8,12 +18,8 @@
     <title>Document</title>
 </head>
 <body>
-    <header>
-
-
-
-    </header>
-
+    
+    <button type="button" ?>" >Deslogar</button>
 
 
 

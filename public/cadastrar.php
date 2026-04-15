@@ -1,6 +1,6 @@
 <?php
 require '../config/config.php';
-require '../functions/func.php';
+require '../controllers\auth.php';
 
     if($_SERVER['REQUEST_METHOD'] === 'POST'){
         $nome = $_POST['nome'] ?? null ;

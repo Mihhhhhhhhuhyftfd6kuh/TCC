@@ -1,4 +1,6 @@
 <?php
+session_start();
+
 function login($email,$senha){
 
 require '../config/config.php';
@@ -18,7 +20,7 @@ require '../config/config.php';
         $_SESSION['id'] = $usuario['id']; // ou 'id' se for esse o nome do campo
         header("Location:../Index.php");
         exit;
-    } else {
+    } elseif($senha && $email == !NULL) {
         echo "<div style='color:#776472;'>Nome, email ou senha incorretos.</div>";
     }
 
@@ -34,14 +36,25 @@ function cadastrar($nome,$email,$senha){
             exit();
 
         }else{
+            $sql ="SELECT COUNT(*) FROM usuarios WHERE email=:email";
+            $stmt = $pdo->prepare($sql);
+            $stmt->bindvalue(':email',$email);
+            $stmt-> execute();
 
+            if($stmt->fetchcolumn() >0){
+
+                echo "email ja cadastrado";
+                header("location:../public/cadastrar.php");
+            }else{
+               
         $sql = "INSERT INTO usuarios (nome, email, senha) VALUES (:nome, :email, :senha)";
         $stmt = $pdo->prepare($sql);
         $stmt ->bindParam(':nome',$nome);
         $stmt ->bindParam(':email',$email);
         $stmt ->bindParam(':senha',$senha);
         $stmt ->execute();
-        exit();
+        return;
+            }
 
 
 
