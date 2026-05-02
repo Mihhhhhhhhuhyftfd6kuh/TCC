@@ -1,6 +1,6 @@
 <?php
-require '../config/config.php';
-require '../controllers\auth.php';
+require __DIR__ . '/../config/config.php';
+require __DIR__ . '/../controllers/auth.php';
 
     if($_SERVER['REQUEST_METHOD'] === 'POST'){
         $nome = $_POST['nome'] ?? null ;

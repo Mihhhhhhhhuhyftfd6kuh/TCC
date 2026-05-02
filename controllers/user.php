@@ -1,14 +1,13 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-function alterar($nome, $email, $senha){
+function alterar(string $nome, string $email, string $senha){
     require __DIR__ . '/../config/config.php';
 
     $id = $_SESSION['id'] ?? null;
-    if (!$id) {
-        echo "Loga la o filho da puta";
-        return false; // usuário não autenticado
-    }
+    
 
     $sql = "UPDATE usuarios SET nome = :nome, email = :email, senha = :senha WHERE id = :id";
     $stmt = $pdo->prepare($sql);
@@ -21,18 +20,23 @@ function alterar($nome, $email, $senha){
 
 }
 function logout(){   
-    session_start(); 
-    session_destroy();
-    header("location:../public/home.php");
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_unset();
+        session_destroy();
+    }
+    // redireciona para a página pública de home
+    header("Location: ../public/home.php");
     exit();
-    
 }
+    
+
 function verificacao_L(){
     require __DIR__ . '/../config/config.php';
 
     $id = $_SESSION['id'];
     if($id == null){
-        echo "ta logado nao paizao";
+        header("location:../public/login.php");
+        exit();
     }
 }
 

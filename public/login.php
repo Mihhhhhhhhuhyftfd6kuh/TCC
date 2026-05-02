@@ -1,4 +1,6 @@
 <?php
+session_start();
+
 require '../config/config.php';
 require '../controllers\auth.php';
 
@@ -6,7 +8,7 @@ if($_SERVER['REQUEST_METHOD']){
     $email =  $_POST['email'] ?? null;
     $senha = $_POST['senha']  ?? null;
 
-login($email,$senha);
+login( $email,$senha);
 
 
 }

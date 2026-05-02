@@ -1,9 +1,10 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+function login( $email, $senha){
 
-function login($email,$senha){
-
-require '../config/config.php';
+require __DIR__ . '/../config/config.php';
 
 
 
@@ -27,8 +28,8 @@ require '../config/config.php';
 
 }
 
-function cadastrar($nome,$email,$senha){
-    require '../config/config.php';
+function cadastrar(string $nome,string $email,string $senha){
+    require __DIR__ . '/../config/config.php';
 
 
  if($nome == (preg_match('/[^a-zA-Z0-9]/', $nome))){
@@ -42,18 +43,19 @@ function cadastrar($nome,$email,$senha){
             $stmt-> execute();
 
             if($stmt->fetchcolumn() >0){
-
                 echo "email ja cadastrado";
                 header("location:../public/cadastrar.php");
+                
             }else{
                
         $sql = "INSERT INTO usuarios (nome, email, senha) VALUES (:nome, :email, :senha)";
         $stmt = $pdo->prepare($sql);
         $stmt ->bindParam(':nome',$nome);
         $stmt ->bindParam(':email',$email);
-        $stmt ->bindParam(':senha',$senha);
+        $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
+$stmt->bindParam(':senha', $senhaHash);
         $stmt ->execute();
-        return;
+        exit();
             }
 
 
