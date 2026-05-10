@@ -53,9 +53,11 @@ function cadastrar(string $nome,string $email,string $senha){
         $stmt ->bindParam(':nome',$nome);
         $stmt ->bindParam(':email',$email);
         $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
-$stmt->bindParam(':senha', $senhaHash);
+        $stmt->bindParam(':senha', $senhaHash);
         $stmt ->execute();
         exit();
+
+    
             }
 
 
