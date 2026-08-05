@@ -71,12 +71,12 @@
 
     <h1>Conversa com usuário ID: <?php echo $id_usuario; ?></h1>
 
-    <span id="ws-status" class="offline">⚫ Desconectado</span>
+    <span id="chat-status" class="offline">⚫ Atualizando...</span>
 
-    <div class="messages" id="messages-container">
+    <div class="messages" id="messages-container" data-id-usuario="<?= (int) $id_usuario ?>" data-meu-id="<?= (int) $_SESSION['id'] ?>">
         <?php if ($conversa && count($conversa) > 0): ?>
             <?php foreach ($conversa as $msg): ?>
-                <div class="message">
+                <div class="message" data-mensagem-id="<?= (int) $msg['id'] ?>">
                     <strong><?= htmlspecialchars($msg['nome']) ?></strong>
                     <p><?= htmlspecialchars($msg['mensagem']) ?></p>
                     <small><?= htmlspecialchars($msg['created_at']) ?></small>
@@ -94,11 +94,12 @@
         <?php endif; ?>
 
         <!--
-            CORREÇÃO 9 — O formulário agora é interceptado pelo JavaScript.
-            Se o WebSocket estiver conectado, a mensagem é enviada em tempo real.
-            Se não estiver (servidor parado), o form faz POST normal como fallback.
+            CORREÇÃO 9 — O formulário agora é enviado via AJAX (fetch),
+            sem recarregar a página. Enquanto isso, o chat também busca
+            mensagens novas periodicamente (polling) para mostrar as
+            respostas do outro lado em tempo quase real.
         -->
-        <form id="form-mensagem" action="?id=<?php echo $id_usuario; ?>" method="post">
+        <form id="form-mensagem">
             <textarea name="mensagem" id="mensagem" placeholder="Digite sua mensagem..." rows="3" style="width:100%"></textarea>
             <button type="submit">Enviar</button>
         </form>
@@ -106,10 +107,116 @@
 
     <a href="../logout.php" style="display:inline-block;padding:8px 12px;background:#c00;color:#fff;text-decoration:none;border-radius:4px;margin-top:10px;">SAIR</a>
 
-    
+    <script>
+    (() => {
+        const container   = document.getElementById('messages-container');
+        const form         = document.getElementById('form-mensagem');
+        const textarea      = document.getElementById('mensagem');
+        const statusEl       = document.getElementById('chat-status');
 
+        const idUsuario = container.dataset.idUsuario;
+        const meuId     = container.dataset.meuId;
 
+        const INTERVALO_ATUALIZACAO = 3000; // 3 segundos
 
-    
+        // Rola o container de mensagens até o final
+        function irParaFinal() {
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Redesenha todas as mensagens recebidas do servidor.
+        // Simples e seguro: sempre reflete exatamente o que está no banco.
+        function renderizarMensagens(mensagens) {
+            const idsAtuais = Array.from(container.querySelectorAll('.message'))
+                .map(el => el.dataset.mensagemId);
+
+            const idsNovos = mensagens.map(m => String(m.id));
+
+            // Se nada mudou (mesma quantidade/mesmos ids), não redesenha
+            const igual = idsAtuais.length === idsNovos.length &&
+                          idsAtuais.every((id, i) => id === idsNovos[i]);
+            if (igual) return;
+
+            container.innerHTML = mensagens.map(m => `
+                <div class="message" data-mensagem-id="${m.id}">
+                    <strong>${m.nome}</strong>
+                    <p>${m.mensagem}</p>
+                    <small>${m.created_at}</small>
+                </div>
+            `).join('');
+
+            irParaFinal();
+        }
+
+        // Busca as mensagens no servidor (AJAX / fetch) e atualiza a tela
+        async function buscarMensagens() {
+            try {
+                const resp = await fetch(`buscar_mensagens.php?id=${idUsuario}`, {
+                    method: 'GET',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                if (!resp.ok) throw new Error('Falha ao buscar mensagens');
+
+                const dados = await resp.json();
+
+                if (dados.sucesso) {
+                    renderizarMensagens(dados.mensagens);
+                    statusEl.textContent = '🟢 Atualizado';
+                    statusEl.className = 'online';
+                } else {
+                    throw new Error(dados.erro || 'Erro desconhecido');
+                }
+            } catch (erro) {
+                statusEl.textContent = '⚫ Sem conexão';
+                statusEl.className = 'offline';
+                console.error('Erro ao buscar mensagens:', erro);
+            }
+        }
+
+        // Envia a mensagem via AJAX, sem recarregar a página
+        async function enviarMensagem(mensagem) {
+            const corpo = new URLSearchParams();
+            corpo.append('mensagem', mensagem);
+            corpo.append('id', idUsuario);
+
+            const resp = await fetch('enviar_mensagem.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: corpo.toString()
+            });
+
+            const dados = await resp.json();
+
+            if (!dados.sucesso) {
+                throw new Error(dados.erro || 'Não foi possível enviar a mensagem');
+            }
+        }
+
+        form.addEventListener('submit', async (evento) => {
+            evento.preventDefault();
+
+            const texto = textarea.value.trim();
+            if (texto === '') return;
+
+            try {
+                await enviarMensagem(texto);
+                textarea.value = '';
+                // Atualiza o chat imediatamente após enviar,
+                // sem esperar o próximo ciclo do polling
+                await buscarMensagens();
+            } catch (erro) {
+                alert('Erro ao enviar mensagem: ' + erro.message);
+            }
+        });
+
+        // Primeira busca imediata + polling contínuo
+        buscarMensagens();
+        setInterval(buscarMensagens, INTERVALO_ATUALIZACAO);
+    })();
+    </script>
 </body>
 </html>

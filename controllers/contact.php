@@ -63,7 +63,9 @@ if (session_status() === PHP_SESSION_NONE) {
 
         // Validar mensagem vazia
         if(empty(trim($mensagem))){
-            echo "Mensagem não pode estar vazia!";
+            // Não usamos echo aqui: esta função também é chamada pelo
+            // endpoint AJAX (enviar_mensagem.php), que precisa devolver
+            // JSON puro. Quem chama criar() decide o que exibir/retornar.
             return false;
         }
 
@@ -74,7 +76,6 @@ if (session_status() === PHP_SESSION_NONE) {
                 $id_destinatario = 1;
             } else {
                 // Admin precisa receber id_destinatario como parâmetro
-                echo "ID do destinatário é obrigatório para o admin!";
                 return false;
             }
         }
@@ -90,7 +91,7 @@ if (session_status() === PHP_SESSION_NONE) {
             $stmt->execute();
             return true;
         } catch(PDOException $e) {
-            echo "Erro ao inserir mensagem: " . $e->getMessage();
+            error_log("Erro ao inserir mensagem: " . $e->getMessage());
             return false;
         }
         

@@ -5,7 +5,7 @@ require __DIR__ . '/../controllers/auth.php';
     if($_SERVER['REQUEST_METHOD'] === 'POST'){
         $nome = $_POST['nome'] ?? null ;
         $email = $_POST['email'] ?? null ;
-        $senha = password_hash($_POST['senha'],PASSWORD_DEFAULT );
+        $senha = $_POST['senha'] ;
 
         cadastrar($nome, $email, $senha);
         exit();

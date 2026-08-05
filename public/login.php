@@ -22,6 +22,8 @@ login( $email,$senha);
     <title>Document</title>
 </head>
 <body>
+            <a class="aba-link" href="cadastrar.php">cadastrar</a>
+
     <form action="" method="post">
 
         <input type="email" name="email" id="email">
@@ -30,5 +32,6 @@ login( $email,$senha);
 
 
     </form>
+
 </body>
 </html>
