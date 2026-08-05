@@ -1,5 +1,4 @@
 <?php
-session_start();
 require "../config/config.php";
 require "../controllers/user.php";
 
