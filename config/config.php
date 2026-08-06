@@ -1,17 +1,21 @@
-
 <?php
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->load();
+// Só carrega o .env se o arquivo existir (ambiente local)
+// No Render, as variáveis já vêm do painel, sem precisar de .env
+if (file_exists(__DIR__ . '/../.env')) {
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
+    $dotenv->load();
+}
+
 // Detecta se está rodando no Render
-$isRender = getenv('RENDER') !== false;
+$isRender = (getenv('RENDER') !== false) || (($_ENV['RENDER'] ?? false) !== false);
 
 if ($isRender) {
 
     // ===== AMBIENTE RENDER =====
-    $databaseUrl = getenv('DATABASE_URL');
+    $databaseUrl = $_ENV['DATABASE_URL'] ?? getenv('DATABASE_URL');
 
     if (!$databaseUrl) {
         die("Variável de ambiente DATABASE_URL não definida no Render.");
@@ -28,23 +32,20 @@ if ($isRender) {
     $password = $parts['pass'] ?? null;
     $dbname   = isset($parts['path']) ? ltrim($parts['path'], '/') : null;
 
-    // Extrai o endpoint_id (necessário para pooler do Neon)
     $endpoint_id = (strpos($host, '-pooler') !== false)
         ? substr($host, 0, strpos($host, '-pooler'))
         : explode('.', $host)[0];
 
-    // DSN já incluindo options=endpoint=... direto (evita precisar de fallback)
     $dsn = "pgsql:host={$host};port={$port};dbname={$dbname};sslmode=require;options='endpoint={$endpoint_id}'";
 
 } elseif ($_SERVER['SERVER_NAME'] === 'localhost' || $_SERVER['SERVER_NAME'] === '127.0.0.1') {
-    
+
     // ===== AMBIENTE LOCAL =====
-    // Configure essas variáveis no seu .env local (ou defina no ambiente do sistema)
-$host        = $_ENV['DB_HOST_LOCAL'] ?? null;
-$user        = $_ENV['DB_USER_LOCAL'] ?? null;
-$password    = $_ENV['DB_PASSWORD_LOCAL'] ?? null;
-$dbname      = $_ENV['DB_NAME_LOCAL'] ?? null;
-$endpoint_id = $_ENV['DB_ENDPOINT_LOCAL'] ?? null;
+    $host        = $_ENV['DB_HOST_LOCAL'] ?? null;
+    $user        = $_ENV['DB_USER_LOCAL'] ?? null;
+    $password    = $_ENV['DB_PASSWORD_LOCAL'] ?? null;
+    $dbname      = $_ENV['DB_NAME_LOCAL'] ?? null;
+    $endpoint_id = $_ENV['DB_ENDPOINT_LOCAL'] ?? null;
 
     if (!$host || !$user || !$dbname) {
         die("Variáveis de ambiente locais não configuradas (DB_HOST_LOCAL, DB_USER_LOCAL, DB_NAME_LOCAL...).");
