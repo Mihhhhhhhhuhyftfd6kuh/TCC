@@ -43,7 +43,7 @@ $dsn = "pgsql:host={$host};port={$port};dbname={$dbname};sslmode=require;options
     $host        = $_ENV['DB_HOST_LOCAL'] ?? null;
     $user        = $_ENV['DB_USER_LOCAL'] ?? null;
     $password    = $_ENV['DB_PASSWORD_LOCAL'] ?? null;
-    $dbname      = 'TCC';
+    $dbname      = $_ENV['DB_NAME_LOCAL'] ?? null;
     $endpoint_id = $_ENV['DB_ENDPOINT_LOCAL'] ?? null;
 
     if (!$host || !$user || !$dbname) {
