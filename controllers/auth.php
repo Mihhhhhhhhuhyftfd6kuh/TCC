@@ -19,7 +19,7 @@ require __DIR__ . '/../config/config.php';
 
     if ($usuario && password_verify($senha, $usuario['senha'])) {
         $_SESSION['id'] = $usuario['id']; // ou 'id' se for esse o nome do campo
-        header("Location:../Index.php");
+        header("Location:../public/home.php");
         exit;
     } elseif($senha && $email == !NULL) {
         echo "<div style='color:#776472;'>Nome, email ou senha incorretos.</div>";
