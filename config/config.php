@@ -43,7 +43,7 @@ $dsn = "pgsql:host={$host};port={$port};dbname={$dbname};sslmode=require;options
     $host        = $_ENV['DB_HOST_LOCAL'] ?? null;
     $user        = $_ENV['DB_USER_LOCAL'] ?? null;
     $password    = $_ENV['DB_PASSWORD_LOCAL'] ?? null;
-    $dbname      = $_ENV['DB_NAME_LOCAL'] ?? null;
+    $dbname      = 'TCC';
     $endpoint_id = $_ENV['DB_ENDPOINT_LOCAL'] ?? null;
 
     if (!$host || !$user || !$dbname) {
@@ -55,7 +55,9 @@ $dsn = "pgsql:host={$host};port={$port};dbname={$dbname};sslmode=require;options
 } else {
     die('Ambiente não reconhecido. Configure a conexão manualmente.');
 }
-
+error_log('HOST: ' . $host);
+error_log('ENDPOINT_ID: ' . $endpoint_id);
+error_log('DSN: ' . $dsn);
 // ===== CONEXÃO (comum aos dois ambientes) =====
 try {
     $pdo = new PDO($dsn, $user, $password, [
