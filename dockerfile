@@ -1,17 +1,19 @@
-# Usa imagem oficial do PHP com Apache
 FROM php:8.2-apache
 
-# Instala dependências do PostgreSQL
-RUN apt-get update && apt-get install -y libpq-dev
+# Instala extensões necessárias (pgsql, pdo_pgsql etc)
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    && docker-php-ext-install pdo pdo_pgsql pgsql
 
-# Instala extensões PHP necessárias
-RUN docker-php-ext-install pdo pdo_pgsql pgsql
+# Instala o Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copia os arquivos do projeto para o servidor Apache
-COPY . /var/www/html/
+# Copia os arquivos do projeto
+WORKDIR /var/www/html
+COPY . .
 
-# Expõe a porta padrão do Apache
-EXPOSE 80
+# Instala as dependências do PHP (isso cria a pasta vendor/)
+RUN composer install --no-dev --optimize-autoloader
 
-# Inicia o Apache
-CMD ["apache2-foreground"]
+# Configuração do Apache (se necessário)
+# ...
