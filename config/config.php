@@ -27,16 +27,15 @@ if ($isRender) {
     }
 
     $host     = $parts['host'];
-    $port     = $parts['port'] ?? 5432;
-    $user     = $parts['user'] ?? null;
-    $password = $parts['pass'] ?? null;
-    $dbname   = isset($parts['path']) ? ltrim($parts['path'], '/') : null;
+$port     = $parts['port'] ?? 5432;
+$user     = $parts['user'] ?? null;
+$password = $parts['pass'] ?? null;
+$dbname   = isset($parts['path']) ? ltrim($parts['path'], '/') : null;
 
-    $endpoint_id = (strpos($host, '-pooler') !== false)
-        ? substr($host, 0, strpos($host, '-pooler'))
-        : explode('.', $host)[0];
+// Endpoint id deve ser IDÊNTICO ao que aparece no host (incluindo -pooler, se houver)
+$endpoint_id = explode('.', $host)[0];
 
-    $dsn = "pgsql:host={$host};port={$port};dbname={$dbname};sslmode=require;options='endpoint={$endpoint_id}'";
+$dsn = "pgsql:host={$host};port={$port};dbname={$dbname};sslmode=require;options='endpoint={$endpoint_id}'";
 
 } elseif ($_SERVER['SERVER_NAME'] === 'localhost' || $_SERVER['SERVER_NAME'] === '127.0.0.1') {
 
