@@ -305,10 +305,10 @@ a {
               
 
                 <label>E-mail:</label>
-                <input type="email">
+                <input type="email" name="email">
 
                 <label>Senha:</label>
-                <input type="password">
+                <input type="senha" name="senha">
 
                 <button type="submit" class="btn-cadastrar">
                     logar

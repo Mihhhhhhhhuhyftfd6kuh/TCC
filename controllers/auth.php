@@ -2,6 +2,11 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+function ver_caractere_especial($nome){
+    return preg_match('/[^a-zA-Z0-9]/', $nome) > 0;
+
+}
 function login( $email, $senha){
 
 require __DIR__ . '/../config/config.php';
@@ -28,15 +33,15 @@ require __DIR__ . '/../config/config.php';
 
 }
 
-function cadastrar(string $nome,string $email,string $senha){
+function cadastrar( $nome, $email, $senha){
     require __DIR__ . '/../config/config.php';
 
 
- if($nome == (preg_match('/[^a-zA-Z0-9]/', $nome))){
-            echo "nao pode caractere";
-            exit();
+ 
+    
 
-        }else{
+        
+        
             $sql ="SELECT COUNT(*) FROM usuarios WHERE email=:email";
             $stmt = $pdo->prepare($sql);
             $stmt->bindvalue(':email',$email);
@@ -48,13 +53,14 @@ function cadastrar(string $nome,string $email,string $senha){
                 
             }else{
                
-        $sql = "INSERT INTO usuarios (nome, email, senha) VALUES (:nome, :email, :senha)";
+        $sql = "INSERT INTO usuarios (nome,email,senha) VALUES (:nome,:email,:senha)";
         $stmt = $pdo->prepare($sql);
         $stmt ->bindParam(':nome',$nome);
         $stmt ->bindParam(':email',$email);
         $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
         $stmt->bindParam(':senha', $senhaHash);
         $stmt ->execute();
+        header("location:../public/cadastrar");
         exit();
 
     
@@ -62,6 +68,6 @@ function cadastrar(string $nome,string $email,string $senha){
 
 
 
-}}
+}
 
 ?>

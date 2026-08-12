@@ -5,7 +5,7 @@ require __DIR__ . '/../controllers/auth.php';
     if($_SERVER['REQUEST_METHOD'] === 'POST'){
         $nome = $_POST['nome'] ?? null ;
         $email = $_POST['email'] ?? null ;
-        $senha = $_POST['senha'] ;
+        $senha = $_POST['senha'] ?? null ;
 
         cadastrar($nome, $email, $senha);
         exit();
@@ -299,14 +299,14 @@ a {
 
             <form method="post">
 
-                <label>Nome completo:</label>
-                <input type="text">
+                <label>Nome:</label>
+                <input type="nome" name="nome">
 
                 <label>E-mail:</label>
-                <input type="email">
+                <input type="email" name="email">
 
                 <label>Senha:</label>
-                <input type="password">
+                <input type="senha" name="senha">
 
                 <button type="submit" class="btn-cadastrar">
                     Cadastrar
