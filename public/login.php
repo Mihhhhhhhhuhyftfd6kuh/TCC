@@ -300,7 +300,7 @@ a {
 
         <div class="form-card">
 
-            <form>
+            <form method="post">
 
               
 

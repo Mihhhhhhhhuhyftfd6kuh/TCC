@@ -297,7 +297,7 @@ a {
 
         <div class="form-card">
 
-            <form>
+            <form method="post">
 
                 <label>Nome completo:</label>
                 <input type="text">
