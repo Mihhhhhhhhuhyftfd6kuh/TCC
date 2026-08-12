@@ -1,6 +1,6 @@
 <?php
-require "../controllers/user.php";
-require "../config/config.php";
+require __DIR__ . '/../config/config.php';
+require __DIR__ . '/../controllers/auth.php';
 
 
 ?>
@@ -57,7 +57,7 @@ require "../config/config.php";
     
         
     </nav>
-    <?php if($_SESSION['id'] == null); ?>
+    <?php if($_SESSION['id'] == null): ?>
     <button class="btn-cadastro">
         <a href="cadastrar.php">
         Cadastre-se
