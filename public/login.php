@@ -1,8 +1,9 @@
 <?php
 session_start();
 
-require '../config/config.php';
-require '../controllers\auth.php';
+require __DIR__ . '/../config/config.php';
+require __DIR__ . '/../controllers/auth.php';
+
 
 if($_SERVER['REQUEST_METHOD']){
     $email =  $_POST['email'] ?? null;
