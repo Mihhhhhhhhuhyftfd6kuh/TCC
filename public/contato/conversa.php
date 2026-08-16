@@ -151,7 +151,7 @@
         // Busca as mensagens no servidor (AJAX / fetch) e atualiza a tela
         async function buscarMensagens() {
             try {
-                const resp = await fetch(`buscar_mensage.php?id=${idUsuario}`, {
+                const resp = await fetch(`buscar_mensagem.php?id=${idUsuario}`, {
                     method: 'GET',
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 });
