@@ -29,16 +29,10 @@ function logout(){
     exit();
 }
     
-
 function verificacao_L(){
-    require __DIR__ . '/../config/config.php';
-
-    $id = $_SESSION['id'];
-    if($id == null){
-        header("location:../public/login.php");
+    if(!isset($_SESSION['id']) || $_SESSION['id'] == null){
+        header("Location: ../login.php");
         exit();
     }
 }
-
-
 ?>

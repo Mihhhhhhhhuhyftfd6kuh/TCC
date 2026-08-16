@@ -1,6 +1,6 @@
 <?php
     require '../../controllers/contact.php';
-
+    require '../../controllers/user.php';
 
     $usuarios = imprimir_com_conversa();
     
