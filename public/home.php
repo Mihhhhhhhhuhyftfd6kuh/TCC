@@ -57,13 +57,11 @@ require __DIR__ . '/../controllers/auth.php';
     
         
     </nav>
-    <?php if($_SESSION['id'] == null): ?>
     <button class="btn-cadastro">
         <a href="cadastrar.php">
         Cadastre-se
         <a/>
     </button>
-    <?php endif; ?>
 
 </header>
 
