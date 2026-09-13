@@ -44,6 +44,8 @@ foreach ($conversa as $msg) {
         'id'          => $msg['id'],
         'nome'        => htmlspecialchars($msg['nome']),
         'mensagem'    => htmlspecialchars($msg['mensagem']),
+         'arquivo_url'  => $msg['arquivo_url'] ?? null,
+    'arquivo_nome' => htmlspecialchars($msg['arquivo_nome'] ?? ''),
         'created_at'  => $msg['created_at'],
         'id_remetente' => (int) $msg['id_remetente'],
         'minha'       => ((int) $msg['id_remetente'] === (int) $_SESSION['id']),

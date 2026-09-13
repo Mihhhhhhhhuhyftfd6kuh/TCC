@@ -58,44 +58,37 @@ if (session_status() === PHP_SESSION_NONE) {
 
 
 
-   function criar($mensagem, $id_remetente, $id_destinatario = null){
-        require __DIR__ . "/../config/config.php";
+  function criar($mensagem, $id_remetente, $id_destinatario = null, $arquivoUrl = null, $arquivoNome = null){
+    require __DIR__ . "/../config/config.php";
 
-        // Validar mensagem vazia
-        if(empty(trim($mensagem))){
-            // Não usamos echo aqui: esta função também é chamada pelo
-            // endpoint AJAX (enviar_mensagem.php), que precisa devolver
-            // JSON puro. Quem chama criar() decide o que exibir/retornar.
+    if(empty(trim($mensagem)) && $arquivoUrl === null){
+        return false;
+    }
+
+    if($id_destinatario === null){
+        if($_SESSION['id'] != 1){
+            $id_destinatario = 1;
+        } else {
             return false;
         }
+    }
 
-        // Se não foi passado id_destinatario, define como admin (1)
-        if($id_destinatario === null){
-            if($_SESSION['id'] != 1){
-                // Usuário comum sempre envia para admin
-                $id_destinatario = 1;
-            } else {
-                // Admin precisa receber id_destinatario como parâmetro
-                return false;
-            }
-        }
+    $sql = "INSERT INTO mensagens(mensagem, id_remetente, id_destinatario, arquivo_url, arquivo_nome, created_at) 
+            VALUES (:mensagem, :id_remetente, :id_destinatario, :arquivo_url, :arquivo_nome, NOW())";
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindParam(":mensagem", $mensagem);
+    $stmt->bindParam(":id_remetente", $id_remetente, PDO::PARAM_INT);
+    $stmt->bindParam(":id_destinatario", $id_destinatario, PDO::PARAM_INT);
+    $stmt->bindParam(":arquivo_url", $arquivoUrl);
+    $stmt->bindParam(":arquivo_nome", $arquivoNome);
 
-        $sql = "INSERT INTO mensagens(mensagem, id_remetente, id_destinatario, created_at) 
-                VALUES (:mensagem, :id_remetente, :id_destinatario, NOW())";
-        $stmt = $pdo->prepare($sql);
-        $stmt->bindParam(":mensagem", $mensagem);
-        $stmt->bindParam(":id_remetente", $id_remetente, PDO::PARAM_INT);
-        $stmt->bindParam(":id_destinatario", $id_destinatario, PDO::PARAM_INT);
-        
-        try {
-            $stmt->execute();
-            return true;
-        } catch(PDOException $e) {
-            error_log("Erro ao inserir mensagem: " . $e->getMessage());
-            return false;
-        }
-        
-   }
-  
+    try {
+        $stmt->execute();
+        return true;
+    } catch(PDOException $e) {
+        error_log("Erro ao inserir mensagem: " . $e->getMessage());
+        return false;
+    }
+}
    
 ?>

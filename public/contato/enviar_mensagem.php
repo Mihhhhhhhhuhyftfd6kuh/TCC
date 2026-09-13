@@ -1,15 +1,8 @@
 <?php
-/**
- * ENDPOINT AJAX — Recebe uma nova mensagem via POST (fetch/AJAX) e a
- * grava no banco usando a função criar() já existente em contact.php.
- *
- * Retorna JSON para que o JavaScript de conversa.php possa atualizar
- * o chat sem recarregar a página.
- */
-
 session_start();
 
 require '../../controllers/contact.php';
+require '../../controllers/storage.php';
 require '../../config/config.php';
 require '../../controllers/user.php';
 
@@ -32,7 +25,20 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $mensagem = isset($_POST['mensagem']) ? trim($_POST['mensagem']) : '';
 $id_param = isset($_POST['id']) ? (int) $_POST['id'] : null;
 
-if ($mensagem === '') {
+$arquivoUrl = null;
+$arquivoNome = null;
+
+if (isset($_FILES['arquivo']) && $_FILES['arquivo']['error'] === UPLOAD_ERR_OK) {
+    if ($_FILES['arquivo']['size'] > 5 * 1024 * 1024) {
+        http_response_code(400);
+        echo json_encode(['sucesso' => false, 'erro' => 'Arquivo maior que 5MB']);
+        exit();
+    }
+    $arquivoNome = basename($_FILES['arquivo']['name']);
+    $arquivoUrl = uploadArquivo($_FILES['arquivo']['tmp_name'], $arquivoNome);
+}
+
+if ($mensagem === '' && $arquivoUrl === null) {
     http_response_code(400);
     echo json_encode(['sucesso' => false, 'erro' => 'Mensagem não pode estar vazia']);
     exit();
@@ -41,7 +47,6 @@ if ($mensagem === '') {
 $id_remetente = $_SESSION['id'];
 
 if ($id_remetente == 1) {
-    // Admin (id 1) precisa informar para qual usuário está respondendo
     if ($id_param === null) {
         http_response_code(400);
         echo json_encode(['sucesso' => false, 'erro' => 'ID do destinatário é obrigatório para o admin']);
@@ -49,11 +54,10 @@ if ($id_remetente == 1) {
     }
     $id_destinatario = $id_param;
 } else {
-    // Usuário comum sempre envia para o admin (id 1)
     $id_destinatario = 1;
 }
 
-$ok = criar($mensagem, $id_remetente, $id_destinatario);
+$ok = criar($mensagem, $id_remetente, $id_destinatario, $arquivoUrl, $arquivoNome);
 
 if ($ok) {
     echo json_encode(['sucesso' => true]);

@@ -3,17 +3,21 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-function chamarIA(string $texto, string $arquivo): array {
-    // Local usa localhost, em produção troque pela URL pública do serviço no Render
+function chamarIA(string $texto, ?string $arquivoConteudo = null, ?string $arquivoNome = null): array {
     $urlApi = getenv('IA_API_URL') ?: 'http://localhost:8000/analisar';
+
+    $payload = [
+        'texto'            => $texto,
+        'arquivo_conteudo' => $arquivoConteudo,
+        'arquivo_nome'     => $arquivoNome,
+    ];
 
     $ch = curl_init($urlApi);
     curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['texto' => $texto]));
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['arquivo' =>$arquivo]));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 30); // a chamada ao Claude leva alguns segundos
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 
     $resposta = curl_exec($ch);
     $erroCurl = curl_error($ch);

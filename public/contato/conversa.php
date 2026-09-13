@@ -79,6 +79,9 @@
                 <div class="message" data-mensagem-id="<?= (int) $msg['id'] ?>">
                     <strong><?= htmlspecialchars($msg['nome']) ?></strong>
                     <p><?= htmlspecialchars($msg['mensagem']) ?></p>
+                    <?php if (!empty($msg['arquivo_url'])): ?>
+                        <p><a href="<?= htmlspecialchars($msg['arquivo_url']) ?>" target="_blank">📎 <?= htmlspecialchars($msg['arquivo_nome']) ?></a></p>
+                    <?php endif; ?>
                     <small><?= htmlspecialchars($msg['created_at']) ?></small>
                 </div>
             <?php endforeach; ?>
@@ -98,9 +101,15 @@
             sem recarregar a página. Enquanto isso, o chat também busca
             mensagens novas periodicamente (polling) para mostrar as
             respostas do outro lado em tempo quase real.
+
+            CORREÇÃO 10 — Adicionado suporte a anexos: enctype
+            multipart/form-data e um input de arquivo, enviados junto
+            com a mensagem via FormData (em vez de URLSearchParams, que
+            não consegue carregar arquivos).
         -->
-        <form id="form-mensagem">
+        <form id="form-mensagem" enctype="multipart/form-data">
             <textarea name="mensagem" id="mensagem" placeholder="Digite sua mensagem..." rows="3" style="width:100%"></textarea>
+            <input type="file" name="arquivo" id="arquivo-mensagem">
             <button type="submit">Enviar</button>
         </form>
     </div>
@@ -109,10 +118,11 @@
 
     <script>
     (() => {
-        const container   = document.getElementById('messages-container');
-        const form         = document.getElementById('form-mensagem');
-        const textarea      = document.getElementById('mensagem');
-        const statusEl       = document.getElementById('chat-status');
+        const container    = document.getElementById('messages-container');
+        const form          = document.getElementById('form-mensagem');
+        const textarea       = document.getElementById('mensagem');
+        const inputArquivo    = document.getElementById('arquivo-mensagem');
+        const statusEl        = document.getElementById('chat-status');
 
         const idUsuario = container.dataset.idUsuario;
         const meuId     = container.dataset.meuId;
@@ -141,6 +151,7 @@
                 <div class="message" data-mensagem-id="${m.id}">
                     <strong>${m.nome}</strong>
                     <p>${m.mensagem}</p>
+                    ${m.arquivo_url ? `<p><a href="${m.arquivo_url}" target="_blank">📎 ${m.arquivo_nome}</a></p>` : ''}
                     <small>${m.created_at}</small>
                 </div>
             `).join('');
@@ -174,19 +185,18 @@
             }
         }
 
-        // Envia a mensagem via AJAX, sem recarregar a página
-        async function enviarMensagem(mensagem) {
-            const corpo = new URLSearchParams();
+        // Envia a mensagem (e o anexo, se houver) via AJAX, sem recarregar a página
+        async function enviarMensagem(mensagem, arquivo) {
+            const corpo = new FormData();
             corpo.append('mensagem', mensagem);
             corpo.append('id', idUsuario);
+            if (arquivo) corpo.append('arquivo', arquivo);
 
             const resp = await fetch('enviar_mensagem.php', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: corpo.toString()
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                // sem Content-Type manual: o navegador define o boundary certo sozinho
+                body: corpo
             });
 
             const dados = await resp.json();
@@ -200,11 +210,13 @@
             evento.preventDefault();
 
             const texto = textarea.value.trim();
-            if (texto === '') return;
+            const arquivo = inputArquivo.files[0];
+            if (texto === '' && !arquivo) return;
 
             try {
-                await enviarMensagem(texto);
+                await enviarMensagem(texto, arquivo);
                 textarea.value = '';
+                inputArquivo.value = '';
                 // Atualiza o chat imediatamente após enviar,
                 // sem esperar o próximo ciclo do polling
                 await buscarMensagens();
