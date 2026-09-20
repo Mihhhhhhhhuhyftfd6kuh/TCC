@@ -110,6 +110,31 @@ nav a:hover{
     box-shadow:0 12px 24px rgba(243,190,39,.45);
 }
 
+/* Botão de menu (hambúrguer) — só aparece no celular */
+.menu-toggle{
+    display:none;
+
+    width:46px;
+    height:46px;
+
+    align-items:center;
+    justify-content:center;
+
+    color:white;
+    font-size:1.4rem;
+
+    border-radius:10px;
+
+    cursor:pointer;
+
+    -webkit-tap-highlight-color:transparent;
+}
+
+/* Cadastro que fica dentro do menu mobile — some no desktop */
+.nav-cadastro{
+    display:none;
+}
+
 .hero {
     position: relative;
     z-index: 2;
@@ -1131,10 +1156,6 @@ html::-webkit-scrollbar{
 
 @media (max-width: 1000px) {
 
-    .header {
-        padding: 20px 30px;
-    }
-
     header {
         padding: 20px 30px;
     }
@@ -1192,21 +1213,64 @@ html::-webkit-scrollbar{
 
     header {
         position: relative;
-        padding: 18px 20px;
-        gap: 16px;
+        padding: 14px 18px;
+        gap: 0;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: space-between;
     }
 
     .logo {
-        font-size: 1.8rem;
+        font-size: 1.7rem;
     }
 
-    nav {
-        gap: 14px 18px;
+    /* Botão hambúrguer visível, cadastro do header some (fica dentro do menu) */
+    .menu-toggle {
+        display: flex;
+        order: 2;
+    }
+
+    .header-cadastro {
+        display: none;
+    }
+
+    .nav-cadastro {
+        display: inline-flex;
         width: 100%;
+        margin-top: 6px;
     }
 
-    nav a {
-        font-size: .9rem;
+    /* Painel do menu, escondido até clicar no hambúrguer */
+    nav {
+        order: 3;
+        flex-basis: 100%;
+
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+
+        max-height: 0;
+        overflow: hidden;
+
+        margin-top: 0;
+        padding: 0 4px;
+
+        background: rgba(255,255,255,.08);
+        border-radius: 14px;
+
+        transition: max-height .35s ease, margin-top .35s ease, padding .35s ease;
+    }
+
+    nav.aberto {
+        max-height: 400px;
+        margin-top: 16px;
+        padding: 14px 16px 18px;
+    }
+
+    nav a:not(.btn-cadastro) {
+        font-size: 1.05rem;
+        padding: 12px 4px;
+        border-bottom: 1px solid rgba(255,255,255,.15);
     }
 
     .btn-cadastro {
@@ -1574,31 +1638,28 @@ button {
         Crypher.IA
     </div>
 
-    <nav>
-        <button class="buttao_L" type="button" onclick="Verlogar('contato/conversa.php');">
+    <button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="navPrincipal">
+        <i class="fa-solid fa-bars"></i>
+    </button>
 
-        <a href="#">Contato</a>
+    <nav id="navPrincipal">
+        <a href="#" onclick="Verlogar('contato/conversa.php'); return false;">Contato</a>
 
-        </button>
-
-        <button class="buttao_L"  type="button" onclick="Verlogar('painel_api.php');">
-
-        <a href="#">IA</a>
-
-        </button>
-
-        <button type="button">
-
+        <a href="#" onclick="Verlogar('painel_api.php'); return false;">IA</a>
 
         <a href="#sobre">Sobre nós</a>
-        
-        </button>
 
+        <?php if ($usuarioLogado): ?>
+            <a href="painel_api.php" class="btn-cadastro nav-cadastro">IA</a>
+        <?php else: ?>
+            <a href="cadastrar.php" class="btn-cadastro nav-cadastro">Cadastre-se</a>
+        <?php endif; ?>
     </nav>
+
     <?php if ($usuarioLogado): ?>
-        <a href="painel_api.php" class="btn-cadastro">IA</a>
+        <a href="painel_api.php" class="btn-cadastro header-cadastro">IA</a>
     <?php else: ?>
-        <a href="cadastrar.php" class="btn-cadastro">Cadastre-se</a>
+        <a href="cadastrar.php" class="btn-cadastro header-cadastro">Cadastre-se</a>
     <?php endif; ?>
 
 </header>
@@ -1979,6 +2040,37 @@ button {
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
+
+    /* =========================
+       MENU MOBILE (HAMBÚRGUER)
+    ========================= */
+
+    const menuToggle = document.getElementById("menuToggle");
+    const navPrincipal = document.getElementById("navPrincipal");
+
+    if (menuToggle && navPrincipal) {
+
+        menuToggle.addEventListener("click", () => {
+
+            const aberto = navPrincipal.classList.toggle("aberto");
+
+            menuToggle.setAttribute("aria-expanded", aberto ? "true" : "false");
+
+            menuToggle.innerHTML = aberto
+                ? '<i class="fa-solid fa-xmark"></i>'
+                : '<i class="fa-solid fa-bars"></i>';
+        });
+
+        // Fecha o menu ao clicar em qualquer link dentro dele
+        navPrincipal.querySelectorAll("a").forEach(link => {
+            link.addEventListener("click", () => {
+                navPrincipal.classList.remove("aberto");
+                menuToggle.setAttribute("aria-expanded", "false");
+                menuToggle.innerHTML = '<i class="fa-solid fa-bars"></i>';
+            });
+        });
+    }
+
 /* =========================
        CHUVINHA
    ========================= */
