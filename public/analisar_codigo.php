@@ -4,6 +4,7 @@ session_start();
 require __DIR__ . '/../controllers/ia.php';
 require __DIR__ . '/../controllers/storage.php';
 require __DIR__ . '/../controllers/analises.php';
+require __DIR__ . '/../controllers/conversas.php';
 require __DIR__ . '/../config/config.php';
 require __DIR__ . '/../controllers/user.php';
 
@@ -120,6 +121,14 @@ if ($texto === '' && $arquivoConteudo === null) {
     exit();
 }
 
+$conversaId = isset($_POST['conversa_id']) ? (int) $_POST['conversa_id'] : null;
+
+if ($conversaId === null || !conversaPertenceAoUsuario($conversaId, $_SESSION['id'])) {
+    http_response_code(400);
+    echo json_encode(['sucesso' => false, 'erro' => 'Conversa inválida']);
+    exit();
+}
+
 $resultado = chamarIA($texto, $arquivoConteudo, $arquivoNome);
 
 if (!$resultado['sucesso']) {
@@ -132,12 +141,23 @@ $estruturado = $resultado['resultado']; // array: linguagem, resumo, vulnerabili
 
 $entradaExibida = $texto !== '' ? $texto : ('Arquivo enviado: ' . $arquivoNome);
 
+$ehPrimeiraMensagem = count(buscarAnalisesPorConversa($conversaId)) === 0;
+
 salvarAnalise(
     $_SESSION['id'],
+    $conversaId,
     $entradaExibida,
     $arquivoNome,
     $estruturado['linguagem'] ?? null,
     json_encode($estruturado)
 );
+
+if ($ehPrimeiraMensagem) {
+    $tituloGerado = mb_substr(preg_replace('/\s+/', ' ', trim($entradaExibida)), 0, 40);
+    if (mb_strlen($entradaExibida) > 40) {
+        $tituloGerado .= '...';
+    }
+    atualizarTituloConversa($conversaId, $tituloGerado);
+}
 
 echo json_encode(['sucesso' => true, 'resultado' => $estruturado, 'entrada' => $entradaExibida]);

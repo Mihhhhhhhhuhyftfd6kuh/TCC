@@ -60,7 +60,7 @@ function cadastrar( $nome, $email, $senha){
         $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
         $stmt->bindParam(':senha', $senhaHash);
         $stmt ->execute();
-        header("location:../public/cadastrar");
+        header("location:../public/login.php");
         exit();
 
     

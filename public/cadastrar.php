@@ -276,11 +276,11 @@ a {
                 Acesse sua conta agora!
             </p>
 
-            <button class="btn-login">
                 <a href="login.php" >
+            <button class="btn-login">
                 login
-                </a>
             </button>
+                </a>
 
         </div>
 
@@ -306,7 +306,7 @@ a {
                 <input type="email" name="email">
 
                 <label>Senha:</label>
-                <input type="senha" name="senha">
+                <input type="password" name="senha">
 
                 <button type="submit" class="btn-cadastrar">
                     Cadastrar

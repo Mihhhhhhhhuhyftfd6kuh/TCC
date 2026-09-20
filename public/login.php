@@ -280,12 +280,14 @@ a {
             <p>
                 Acesse sua conta agora!
             </p>
+                <a href="cadastrar.php" >
 
             <button class="btn-login">
-                <a href="cadastrar.php" >
+                
                 cadastrar
-                </a>
+              
             </button>
+                </a>
 
         </div>
 
@@ -309,9 +311,9 @@ a {
                 <input type="email" name="email">
 
                 <label>Senha:</label>
-                <input type="senha" name="senha">
+                <input type="password" name="senha">
 
-                <button type="submit" class="btn-cadastrar">
+                <button type="submit" class="btn-cadastrar" >
                     logar
                 </button>
 
