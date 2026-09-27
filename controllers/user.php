@@ -3,93 +3,87 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-function alterar(string $nome, string $email, ?string $senhaAtual = null, ?string $novaSenha = null): array {
+/**
+ * Atualiza nome, e-mail e (opcionalmente) senha do usuário logado.
+ * Exige a senha atual pra confirmar QUALQUER alteração (medida de segurança).
+ *
+ * Retorna sempre um array: ['sucesso' => bool, 'erro' => string|null]
+ */
+function alterar($nome, $email, $senhaAtual, $novaSenha = null) {
     require __DIR__ . '/../config/config.php';
 
     $id = $_SESSION['id'] ?? null;
 
     if ($id === null) {
-        return ['sucesso' => false, 'erro' => 'Sessão inválida'];
+        return ['sucesso' => false, 'erro' => 'Sessão expirada. Faça login novamente.'];
     }
 
-    $nome = trim($nome);
-    $email = trim($email);
+    $nome  = trim($nome ?? '');
+    $email = trim($email ?? '');
 
     if ($nome === '' || $email === '') {
-        return ['sucesso' => false, 'erro' => 'Nome e e-mail não podem ficar em branco'];
+        return ['sucesso' => false, 'erro' => 'Nome e e-mail não podem ficar vazios.'];
     }
 
-    // Verifica se o e-mail já está em uso por outro usuário
-    $sqlCheck = "SELECT COUNT(*) FROM usuarios WHERE email = :email AND id != :id";
-    $stmtCheck = $pdo->prepare($sqlCheck);
-    $stmtCheck->bindValue(':email', $email);
-    $stmtCheck->bindValue(':id', $id, PDO::PARAM_INT);
-    $stmtCheck->execute();
-
-    if ($stmtCheck->fetchColumn() > 0) {
-        return ['sucesso' => false, 'erro' => 'Esse e-mail já está sendo usado por outra conta'];
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return ['sucesso' => false, 'erro' => 'Digite um e-mail válido.'];
     }
 
-    $campos = "nome = :nome, email = :email";
-    $params = [':nome' => $nome, ':email' => $email, ':id' => $id];
+    // Busca o hash da senha atual pra conferir antes de alterar qualquer coisa
+    $sql = "SELECT senha FROM usuarios WHERE id = :id";
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+    $stmt->execute();
+    $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Só mexe na senha se o usuário realmente preencheu uma nova
-    if ($novaSenha !== null && $novaSenha !== '') {
-        $sqlSenha = "SELECT senha FROM usuarios WHERE id = :id";
-        $stmtSenha = $pdo->prepare($sqlSenha);
-        $stmtSenha->bindValue(':id', $id, PDO::PARAM_INT);
-        $stmtSenha->execute();
-        $usuario = $stmtSenha->fetch(PDO::FETCH_ASSOC);
+    if (!$usuario) {
+        return ['sucesso' => false, 'erro' => 'Usuário não encontrado.'];
+    }
 
-        if (!$usuario || !password_verify((string) $senhaAtual, $usuario['senha'])) {
-            return ['sucesso' => false, 'erro' => 'Senha atual incorreta'];
-        }
+    if (empty($senhaAtual) || !password_verify($senhaAtual, $usuario['senha'])) {
+        return ['sucesso' => false, 'erro' => 'Senha atual incorreta.'];
+    }
 
+    // Não deixa usar um e-mail que já pertence a outra conta
+    $sqlEmail = "SELECT COUNT(*) FROM usuarios WHERE email = :email AND id != :id";
+    $stmtEmail = $pdo->prepare($sqlEmail);
+    $stmtEmail->bindValue(':email', $email);
+    $stmtEmail->bindValue(':id', $id, PDO::PARAM_INT);
+    $stmtEmail->execute();
+
+    if ($stmtEmail->fetchColumn() > 0) {
+        return ['sucesso' => false, 'erro' => 'Esse e-mail já está sendo usado por outra conta.'];
+    }
+
+    // Se veio uma nova senha, troca ela também (a checagem de confirmação
+    // já é feita antes, em atualizar_perfil.php)
+    if (!empty($novaSenha)) {
         if (strlen($novaSenha) < 6) {
-            return ['sucesso' => false, 'erro' => 'A nova senha precisa ter pelo menos 6 caracteres'];
+            return ['sucesso' => false, 'erro' => 'A nova senha deve ter pelo menos 6 caracteres.'];
         }
 
-        $campos .= ", senha = :senha";
-        $params[':senha'] = password_hash($novaSenha, PASSWORD_DEFAULT);
+        $sql  = "UPDATE usuarios SET nome = :nome, email = :email, senha = :senha WHERE id = :id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':senha', password_hash($novaSenha, PASSWORD_DEFAULT));
+    } else {
+        $sql  = "UPDATE usuarios SET nome = :nome, email = :email WHERE id = :id";
+        $stmt = $pdo->prepare($sql);
     }
 
-    $sql = "UPDATE usuarios SET {$campos} WHERE id = :id";
-    $stmt = $pdo->prepare($sql);
-
-    try {
-        $stmt->execute($params);
-        return ['sucesso' => true];
-    } catch (PDOException $e) {
-        error_log("Erro ao atualizar usuário: " . $e->getMessage());
-        return ['sucesso' => false, 'erro' => 'Não foi possível salvar as alterações'];
-    }
-}
-
-function deletar(): bool {
-    require __DIR__ . '/../config/config.php';
-
-    $id = $_SESSION['id'] ?? null;
-
-    if ($id === null) {
-        return false;
-    }
-
-    $sql = "DELETE FROM usuarios WHERE id = :id";
-    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue(':nome', $nome);
+    $stmt->bindValue(':email', $email);
     $stmt->bindValue(':id', $id, PDO::PARAM_INT);
 
     try {
         $stmt->execute();
-        session_unset();
-        session_destroy();
-        return true;
+        return ['sucesso' => true, 'erro' => null];
     } catch (PDOException $e) {
-        error_log("Erro ao deletar usuário: " . $e->getMessage());
-        return false;
+        error_log("Erro ao atualizar perfil: " . $e->getMessage());
+        return ['sucesso' => false, 'erro' => 'Não foi possível salvar suas alterações.'];
     }
 }
 
-function logout(){
+function logout(){   
     if (session_status() === PHP_SESSION_ACTIVE) {
         session_unset();
         session_destroy();
@@ -98,7 +92,7 @@ function logout(){
     header("Location: ../public/home.php");
     exit();
 }
-
+    
 
 function verificacao_L(){
     require __DIR__ . '/../config/config.php';

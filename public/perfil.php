@@ -1,163 +1,191 @@
 <?php
-require __DIR__ . '/../config/config.php';
-require __DIR__ . '/../controllers/auth.php';
-require __DIR__ . '/../controllers/user.php';
+session_start();
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require __DIR__ . '/../config/config.php';
+require __DIR__ . '/../controllers/user.php';
 
 verificacao_L();
 
-$sql = "SELECT nome, email FROM usuarios WHERE id = :id";
-$stmt = $pdo->prepare($sql);
-$stmt->bindValue(':id', $_SESSION['id'], PDO::PARAM_INT);
-$stmt->execute();
-$usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+$id = $_SESSION['id'];
+
+// Busca os dados atuais do usuário logado
+$sqlUsuario = "SELECT nome, email FROM usuarios WHERE id = :id";
+$stmtUsuario = $pdo->prepare($sqlUsuario);
+$stmtUsuario->bindParam(':id', $id, PDO::PARAM_INT);
+$stmtUsuario->execute();
+$usuario = $stmtUsuario->fetch(PDO::FETCH_ASSOC);
+
+// atualizar_perfil.php manda ?sucesso=1 ou ?sucesso=mensagem; os arquivos de
+// apagar mandam ?sucesso=mensagem. Os dois casos são tratados aqui.
+$sucesso = $_GET['sucesso'] ?? null;
+$erro    = $_GET['erro'] ?? null;
+
+if ($sucesso === '1') {
+    $sucesso = 'Dados atualizados com sucesso.';
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Perfil - Crypher.IA</title>
+    <title>Meu perfil - Crypher.IA</title>
+
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
-        body { max-width: 700px; margin: 40px auto; padding: 0 20px; }
-        header a { margin-right: 20px; text-decoration: none; color: #4348D9; font-weight: 600; }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
 
-        .abas { display: flex; gap: 10px; margin: 24px 0 16px; border-bottom: 1px solid #ddd; }
-        .aba-btn { padding: 10px 18px; border: none; background: none; cursor: pointer; font-weight: 600; color: #888; border-bottom: 3px solid transparent; font-size: 1em; }
-        .aba-btn.ativa { color: #222; border-bottom-color: #F3BE27; }
+        body { background:#ECECEC; min-height:100vh; padding-bottom:60px; }
 
-        .painel-aba { display: none; }
-        .painel-aba.ativa { display: block; }
+        header {
+            background:#4348D9;
+            padding:20px 40px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+        }
 
-        .campo { margin-bottom: 14px; }
-        .campo label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9em; }
-        .campo input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-family: inherit; font-size: 0.95em; }
-        .campo input:disabled { background: #f7f7f7; color: #666; }
-        .campo small { display: block; margin-top: 4px; color: #888; font-size: 0.78em; }
+        header .logo { color:#fff; font-size:1.6rem; font-weight:700; }
 
-        .secao { margin-bottom: 26px; }
-        .secao h3 { margin-bottom: 12px; font-size: 1.05em; }
+        header nav a {
+            color:#fff;
+            text-decoration:none;
+            font-weight:500;
+            margin-left:25px;
+        }
 
-        .btn-salvar { background: #F3BE27; border: none; padding: 10px 24px; border-radius: 999px; font-weight: 700; cursor: pointer; }
-        .btn-salvar:hover { opacity: 0.9; }
+        header nav a:hover { opacity:.8; }
 
-        .zona-perigo { margin-top: 10px; padding: 16px; border: 1px solid #d9534f; border-radius: 10px; background: #fff5f5; }
-        .zona-perigo h3 { color: #d9534f; margin-bottom: 8px; }
-        .zona-perigo p { font-size: 0.9em; margin-bottom: 12px; color: #555; }
-        .btn-deletar { background: #d9534f; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; }
-        .btn-deletar:hover { background: #c9302c; }
+        main { max-width:700px; margin:40px auto; padding:0 20px; }
 
-        .msg-erro { color: #d9534f; font-size: 0.9em; margin-bottom: 16px; padding: 10px; background: #fff5f5; border-radius: 8px; }
-        .msg-sucesso { color: #2e7d32; font-size: 0.9em; margin-bottom: 16px; padding: 10px; background: #f1f8f2; border-radius: 8px; }
+        h1 { margin-bottom:25px; color:#222; }
 
-        hr { border: none; border-top: 1px solid #eee; margin: 20px 0; }
+        .flash-success, .flash-error {
+            padding:12px 16px;
+            border-radius:8px;
+            margin-bottom:20px;
+            font-size:.9rem;
+        }
+        .flash-success { background:#d4edda; color:#155724; }
+        .flash-error   { background:#f8d7da; color:#721c24; }
+
+        .card {
+            background:#fff;
+            border-radius:14px;
+            padding:30px;
+            margin-bottom:25px;
+            box-shadow:0 8px 20px rgba(0,0,0,.08);
+        }
+
+        .card h2 { font-size:1.2rem; margin-bottom:6px; color:#222; }
+        .card p.desc { color:#666; font-size:.9rem; margin:6px 0 18px; }
+
+        label { display:block; font-weight:600; margin-bottom:6px; color:#333; }
+
+        input[type=text], input[type=email], input[type=password] {
+            width:100%;
+            height:44px;
+            border:1px solid #ccc;
+            border-radius:8px;
+            padding:0 14px;
+            margin-bottom:18px;
+            font-size:1rem;
+        }
+
+        .campo-senha-nova {
+            border-top: 1px solid #eee;
+            margin-top: 6px;
+            padding-top: 18px;
+        }
+
+        .campo-senha-nova p.desc { margin-top: 0; }
+
+        button {
+            border:none;
+            border-radius:999px;
+            padding:12px 26px;
+            font-weight:700;
+            font-size:.95rem;
+            cursor:pointer;
+            transition:.25s ease;
+        }
+
+        .btn-salvar { background:#F3BE27; color:#222; }
+        .btn-salvar:hover { transform:translateY(-2px); box-shadow:0 8px 16px rgba(243,190,39,.35); }
+
+        .zona-perigo h2 { color:#c00; }
+
+        .btn-apagar { background:#fff; color:#c00; border:2px solid #c00; }
+        .btn-apagar:hover { background:#c00; color:#fff; }
     </style>
 </head>
 <body>
     <header>
-        <a href="home.php">home</a>
-        <a href="painel_api.php">analisar código</a>
+        <div class="logo">Crypher.IA</div>
+        <nav>
+            <a href="home.php">home</a>
+            <a href="logout.php">sair</a>
+        </nav>
     </header>
 
-    <h1>Minha conta</h1>
+    <main>
+        <h1>Meu perfil</h1>
 
-    <?php if (isset($_GET['sucesso'])): ?>
-        <p class="msg-sucesso">Dados atualizados com sucesso!</p>
-    <?php endif; ?>
-    <?php if (isset($_GET['erro'])): ?>
-        <p class="msg-erro"><?= htmlspecialchars($_GET['erro']) ?></p>
-    <?php endif; ?>
+        <?php if ($sucesso): ?>
+            <div class="flash-success"><?php echo htmlspecialchars($sucesso); ?></div>
+        <?php endif; ?>
+        <?php if ($erro): ?>
+            <div class="flash-error"><?php echo htmlspecialchars($erro); ?></div>
+        <?php endif; ?>
 
-    <div class="abas">
-        <button class="aba-btn ativa" data-aba="perfil">Perfil</button>
-        <button class="aba-btn" data-aba="config">Configurações</button>
-    </div>
+        <div class="card">
+            <h2>Dados da conta</h2>
+            <p class="desc">Altere seu nome, e-mail ou senha. Informe sua senha atual pra confirmar.</p>
 
-    <div class="painel-aba ativa" id="aba-perfil">
-        <div class="campo">
-            <label>Nome</label>
-            <input type="text" value="<?= htmlspecialchars($usuario['nome'] ?? '') ?>" disabled>
-        </div>
-        <div class="campo">
-            <label>E-mail</label>
-            <input type="email" value="<?= htmlspecialchars($usuario['email'] ?? '') ?>" disabled>
-        </div>
-    </div>
+            <form method="post" action="atualizar_perfil.php">
+                <label for="nome">Nome</label>
+                <input type="text" id="nome" name="nome" value="<?php echo htmlspecialchars($usuario['nome'] ?? ''); ?>" required>
 
-    <div class="painel-aba" id="aba-config">
-        <form method="POST" action="atualizar_perfil.php">
-            <div class="secao">
-                <h3>Dados da conta</h3>
+                <label for="email_novo">E-mail</label>
+                <input type="email" id="email_novo" name="email_novo" value="<?php echo htmlspecialchars($usuario['email'] ?? ''); ?>" required>
 
-                <div class="campo">
-                    <label for="nome">Nome</label>
-                    <input type="text" id="nome" name="nome" value="<?= htmlspecialchars($usuario['nome'] ?? '') ?>" required>
-                </div>
+                <label for="senha_atual">Senha atual</label>
+                <input type="password" id="senha_atual" name="senha_atual" placeholder="Necessária para salvar qualquer alteração" required>
 
-                <div class="campo">
-                    <label for="email">E-mail</label>
-                    <input type="email" id="email" name="email" value="<?= htmlspecialchars($usuario['email'] ?? '') ?>" required>
-                </div>
-            </div>
+                <div class="campo-senha-nova">
+                    <p class="desc">Quer trocar de senha? Preencha os dois campos abaixo (deixe em branco pra manter a senha atual).</p>
 
-            <hr>
-
-            <div class="secao">
-                <h3>Alterar senha</h3>
-                <p style="font-size:0.85em; color:#888; margin-bottom:12px;">Deixe os campos abaixo em branco se não quiser trocar a senha agora.</p>
-
-                <div class="campo">
-                    <label for="senha_atual">Senha atual</label>
-                    <input type="password" id="senha_atual" name="senha_atual" autocomplete="current-password">
-                    <small>Obrigatória apenas se você for definir uma nova senha.</small>
-                </div>
-
-                <div class="campo">
                     <label for="nova_senha">Nova senha</label>
-                    <input type="password" id="nova_senha" name="nova_senha" autocomplete="new-password" minlength="6">
-                </div>
+                    <input type="password" id="nova_senha" name="nova_senha" placeholder="Deixe em branco para não alterar">
 
-                <div class="campo">
                     <label for="confirmar_senha">Confirmar nova senha</label>
-                    <input type="password" id="confirmar_senha" name="confirmar_senha" autocomplete="new-password" minlength="6">
+                    <input type="password" id="confirmar_senha" name="confirmar_senha" placeholder="Repita a nova senha">
                 </div>
-            </div>
 
-            <button type="submit" class="btn-salvar">Salvar alterações</button>
-        </form>
-
-        <hr>
-
-        <div class="zona-perigo">
-            <h3>Excluir conta</h3>
-            <p>Essa ação apaga seu usuário e todo o histórico de conversas e análises permanentemente. Não tem como desfazer.</p>
-            <form method="POST" action="deletar_conta.php" onsubmit="return confirm('Tem certeza que quer excluir sua conta? Essa ação não pode ser desfeita.');">
-                <input type="hidden" name="confirmar" value="sim">
-                <button type="submit" class="btn-deletar">Excluir minha conta</button>
+                <button type="submit" class="btn-salvar">Salvar alterações</button>
             </form>
         </div>
-    </div>
 
-    <script>
-    document.querySelectorAll('.aba-btn').forEach(botao => {
-        botao.addEventListener('click', () => {
-            document.querySelectorAll('.aba-btn').forEach(b => b.classList.remove('ativa'));
-            document.querySelectorAll('.painel-aba').forEach(p => p.classList.remove('ativa'));
+        <div class="card zona-perigo">
+            <h2>Apagar histórico do chat de análise</h2>
+            <p class="desc">Remove permanentemente todas as suas conversas com a IA na página de análise de código.</p>
 
-            botao.classList.add('ativa');
-            document.getElementById('aba-' + botao.dataset.aba).classList.add('ativa');
-        });
-    });
+            <form method="post" action="apagar_dados.php" onsubmit="return confirm('Tem certeza que deseja apagar todo o histórico do chat de análise? Essa ação não pode ser desfeita.');">
+                <input type="hidden" name="tipo" value="chat">
+                <button type="submit" class="btn-apagar">Apagar histórico do chat</button>
+            </form>
+        </div>
 
-    // Se a URL veio com ?erro= ou ?sucesso= (ex: após salvar), já abre direto na aba Configurações
-    if (window.location.search.includes('erro=') || window.location.search.includes('sucesso=')) {
-        document.querySelector('.aba-btn[data-aba="config"]').click();
-    }
-    </script>
+        <div class="card zona-perigo">
+            <h2>Apagar conversa com o suporte</h2>
+            <p class="desc">Remove permanentemente sua conversa na aba de contato com a equipe.</p>
+
+            <form method="post" action="apagar_dados.php" onsubmit="return confirm('Tem certeza que deseja apagar toda a conversa com o suporte? Essa ação não pode ser desfeita.');">
+                <input type="hidden" name="tipo" value="conversa">
+                <button type="submit" class="btn-apagar">Apagar conversa</button>
+            </form>
+        </div>
+    </main>
 </body>
 </html>

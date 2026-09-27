@@ -110,29 +110,63 @@ nav a:hover{
     box-shadow:0 12px 24px rgba(243,190,39,.45);
 }
 
-/* Botão de menu (hambúrguer) — só aparece no celular */
-.menu-toggle{
-    display:none;
+.conta-menu{
+    position:relative;
+}
 
-    width:46px;
-    height:46px;
+.conta-botao{
+    background:rgba(255,255,255,0.15);
+    color:#fff;
+    border:1px solid rgba(255,255,255,.35);
 
-    align-items:center;
-    justify-content:center;
+    padding:10px 18px;
+    border-radius:999px;
 
-    color:white;
-    font-size:1.4rem;
-
-    border-radius:10px;
+    font-weight:600;
+    font-size:.95rem;
 
     cursor:pointer;
 
-    -webkit-tap-highlight-color:transparent;
+    backdrop-filter:blur(10px);
+    transition:.3s ease;
 }
 
-/* Cadastro que fica dentro do menu mobile — some no desktop */
-.nav-cadastro{
+.conta-botao:hover{
+    background:rgba(255,255,255,0.25);
+}
+
+.conta-dropdown{
     display:none;
+    position:absolute;
+    top:calc(100% + 10px);
+    right:0;
+
+    background:#fff;
+    border-radius:12px;
+    overflow:hidden;
+    min-width:190px;
+
+    box-shadow:0 15px 35px rgba(0,0,0,.22);
+    z-index:200;
+}
+
+.conta-dropdown.ativo{
+    display:block;
+}
+
+.conta-dropdown a{
+    display:block;
+    padding:13px 20px;
+
+    color:#222;
+    font-size:.9rem;
+    font-weight:500;
+
+    transition:.2s ease;
+}
+
+.conta-dropdown a:hover{
+    background:#f2f2f2;
 }
 
 .hero {
@@ -1156,6 +1190,10 @@ html::-webkit-scrollbar{
 
 @media (max-width: 1000px) {
 
+    .header {
+        padding: 20px 30px;
+    }
+
     header {
         padding: 20px 30px;
     }
@@ -1213,64 +1251,21 @@ html::-webkit-scrollbar{
 
     header {
         position: relative;
-        padding: 14px 18px;
-        gap: 0;
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: space-between;
+        padding: 18px 20px;
+        gap: 16px;
     }
 
     .logo {
-        font-size: 1.7rem;
+        font-size: 1.8rem;
     }
 
-    /* Botão hambúrguer visível, cadastro do header some (fica dentro do menu) */
-    .menu-toggle {
-        display: flex;
-        order: 2;
-    }
-
-    .header-cadastro {
-        display: none;
-    }
-
-    .nav-cadastro {
-        display: inline-flex;
-        width: 100%;
-        margin-top: 6px;
-    }
-
-    /* Painel do menu, escondido até clicar no hambúrguer */
     nav {
-        order: 3;
-        flex-basis: 100%;
-
-        flex-direction: column;
-        align-items: stretch;
-        gap: 4px;
-
-        max-height: 0;
-        overflow: hidden;
-
-        margin-top: 0;
-        padding: 0 4px;
-
-        background: rgba(255,255,255,.08);
-        border-radius: 14px;
-
-        transition: max-height .35s ease, margin-top .35s ease, padding .35s ease;
+        gap: 14px 18px;
+        width: 100%;
     }
 
-    nav.aberto {
-        max-height: 400px;
-        margin-top: 16px;
-        padding: 14px 16px 18px;
-    }
-
-    nav a:not(.btn-cadastro) {
-        font-size: 1.05rem;
-        padding: 12px 4px;
-        border-bottom: 1px solid rgba(255,255,255,.15);
+    nav a {
+        font-size: .9rem;
     }
 
     .btn-cadastro {
@@ -1638,28 +1633,39 @@ button {
         Crypher.IA
     </div>
 
-    <button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="navPrincipal">
-        <i class="fa-solid fa-bars"></i>
-    </button>
+    <nav>
+        <button class="buttao_L" type="button" onclick="Verlogar('contato/conversa.php');">
 
-    <nav id="navPrincipal">
-        <a href="#" onclick="Verlogar('contato/conversa.php'); return false;">Contato</a>
+        <a href="#">Contato</a>
 
-        <a href="#" onclick="Verlogar('painel_api.php'); return false;">IA</a>
+        </button>
+
+        <button class="buttao_L"  type="button" onclick="Verlogar('painel_api.php');">
+
+        <a href="#">IA</a>
+
+        </button>
+
+        <button type="button">
+
 
         <a href="#sobre">Sobre nós</a>
+        
+        </button>
 
-        <?php if ($usuarioLogado): ?>
-            <a href="painel_api.php" class="btn-cadastro nav-cadastro">IA</a>
-        <?php else: ?>
-            <a href="cadastrar.php" class="btn-cadastro nav-cadastro">Cadastre-se</a>
-        <?php endif; ?>
     </nav>
-
     <?php if ($usuarioLogado): ?>
-        <a href="painel_api.php" class="btn-cadastro header-cadastro">IA</a>
+
+        <div class="conta-menu">
+            <button type="button" class="conta-botao" onclick="toggleContaMenu();">Minha conta ▾</button>
+
+            <div class="conta-dropdown" id="contaDropdown">
+                <a href="perfil.php">Configurações</a>
+                <a href="logout.php">Sair</a>
+            </div>
+        </div>
     <?php else: ?>
-        <a href="cadastrar.php" class="btn-cadastro header-cadastro">Cadastre-se</a>
+        <a href="cadastrar.php" class="btn-cadastro">Cadastre-se</a>
     <?php endif; ?>
 
 </header>
@@ -1939,7 +1945,7 @@ button {
         <div class="membro">
 
             <div class="foto-membro">
-                <img src="img/heittor.jpeg" alt="">
+                <img src="assets/img/Heittor.png" alt="">
             </div>
 
             <h3>Heittor Moreira Rodrigues</h3>
@@ -1951,7 +1957,7 @@ button {
         <div class="membro">
 
             <div class="foto-membro">
-                <img src="img/miria.jpeg" alt="">
+                <img src="assets\img\miria.jpeg" alt="">
             </div>
 
             <h3>Miriã Marques de Oliveira</h3>
@@ -1963,7 +1969,7 @@ button {
         <div class="membro">
 
             <div class="foto-membro">
-                <img src="img/giovana.jpeg" alt="">
+                <img src="assets\img\giovana.jpeg" alt="">
             </div>
 
             <h3>Giovana Akemi Hirayama Botelho</h3>
@@ -2036,41 +2042,25 @@ button {
             window.location.href = 'login.php';
         }, 2500);
     }
+
+    // Abre/fecha o menu "Minha conta" (Configurações / Sair)
+    function toggleContaMenu() {
+        document.getElementById('contaDropdown').classList.toggle('ativo');
+    }
+
+    // Fecha o menu se a pessoa clicar em qualquer lugar fora dele
+    document.addEventListener('click', (evento) => {
+        const menu = document.querySelector('.conta-menu');
+        const dropdown = document.getElementById('contaDropdown');
+
+        if (menu && dropdown && !menu.contains(evento.target)) {
+            dropdown.classList.remove('ativo');
+        }
+    });
 </script>
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
-
-    /* =========================
-       MENU MOBILE (HAMBÚRGUER)
-    ========================= */
-
-    const menuToggle = document.getElementById("menuToggle");
-    const navPrincipal = document.getElementById("navPrincipal");
-
-    if (menuToggle && navPrincipal) {
-
-        menuToggle.addEventListener("click", () => {
-
-            const aberto = navPrincipal.classList.toggle("aberto");
-
-            menuToggle.setAttribute("aria-expanded", aberto ? "true" : "false");
-
-            menuToggle.innerHTML = aberto
-                ? '<i class="fa-solid fa-xmark"></i>'
-                : '<i class="fa-solid fa-bars"></i>';
-        });
-
-        // Fecha o menu ao clicar em qualquer link dentro dele
-        navPrincipal.querySelectorAll("a").forEach(link => {
-            link.addEventListener("click", () => {
-                navPrincipal.classList.remove("aberto");
-                menuToggle.setAttribute("aria-expanded", "false");
-                menuToggle.innerHTML = '<i class="fa-solid fa-bars"></i>';
-            });
-        });
-    }
-
 /* =========================
        CHUVINHA
    ========================= */

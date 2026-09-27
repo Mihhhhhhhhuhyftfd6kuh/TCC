@@ -45,6 +45,16 @@
     $flash_success = $_SESSION['flash_success'] ?? null;
     $flash_error   = $_SESSION['flash_error']   ?? null;
     unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+
+    if(isset($_GET['acao']) && $_GET['acao'] === 'apagar'){
+    if(apagar_conversa($id_usuario)){
+        $_SESSION['flash_success'] = 'Conversa apagada com sucesso.';
+    } else {
+        $_SESSION['flash_error'] = 'Erro ao apagar conversa.';
+    }
+    header("Location: ?id={$id_usuario}");
+    exit();
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">

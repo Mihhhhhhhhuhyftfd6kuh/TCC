@@ -56,7 +56,24 @@ if (session_status() === PHP_SESSION_NONE) {
 
     }}
 
+function apagar_conversa(int $id_usuario){
+    require __DIR__ . "/../config/config.php";
+    $admin = 1;
 
+    $sql = "DELETE FROM mensagens
+            WHERE (id_remetente = :user AND id_destinatario = :admin)
+            OR (id_remetente = :admin AND id_destinatario = :user)";
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindParam(':user', $id_usuario, PDO::PARAM_INT);
+    $stmt->bindParam(':admin', $admin, PDO::PARAM_INT);
+
+    try {
+        return $stmt->execute();
+    } catch (PDOException $e) {
+        echo "Erro ao apagar conversa: " . $e->getMessage();
+        return false;
+    }
+}
 
   function criar($mensagem, $id_remetente, $id_destinatario = null, $arquivoUrl = null, $arquivoNome = null){
     require __DIR__ . "/../config/config.php";
