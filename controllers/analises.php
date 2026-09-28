@@ -34,3 +34,28 @@ function buscarAnalisesPorConversa(int $conversaId): array {
     $stmt->execute();
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
+
+function apagarAnalises(int $usuarioId): bool {
+    require __DIR__ . "/../config/config.php";
+
+    try {
+        $pdo->beginTransaction();
+
+        $stmt1 = $pdo->prepare("DELETE FROM analises WHERE usuario_id = :usuario_id");
+        $stmt1->bindParam(':usuario_id', $usuarioId, PDO::PARAM_INT);
+        $stmt1->execute();
+
+        // Apaga também as conversas (a lista da sidebar), já que sem
+        // análises elas ficariam vazias e "fantasmas"
+        $stmt2 = $pdo->prepare("DELETE FROM conversas WHERE usuario_id = :usuario_id");
+        $stmt2->bindParam(':usuario_id', $usuarioId, PDO::PARAM_INT);
+        $stmt2->execute();
+
+        $pdo->commit();
+        return true;
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        error_log("Erro ao apagar histórico de análises: " . $e->getMessage());
+        return false;
+    }
+}

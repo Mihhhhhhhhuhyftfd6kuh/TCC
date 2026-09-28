@@ -1945,7 +1945,7 @@ button {
         <div class="membro">
 
             <div class="foto-membro">
-                <img src="assets/img/Heittor.png" alt="">
+                <img src="..\assets/img/Heittor.png" alt="">
             </div>
 
             <h3>Heittor Moreira Rodrigues</h3>
@@ -1957,7 +1957,7 @@ button {
         <div class="membro">
 
             <div class="foto-membro">
-                <img src="assets\img\miria.jpeg" alt="">
+                <img src="..\assets\img\Miria.jpeg" alt="">
             </div>
 
             <h3>Miriã Marques de Oliveira</h3>
@@ -1969,7 +1969,7 @@ button {
         <div class="membro">
 
             <div class="foto-membro">
-                <img src="assets\img\giovana.jpeg" alt="">
+                <img src="..\assets\img\Giovana.jpeg" alt="">
             </div>
 
             <h3>Giovana Akemi Hirayama Botelho</h3>

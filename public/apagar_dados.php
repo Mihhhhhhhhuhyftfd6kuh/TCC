@@ -24,19 +24,19 @@ switch ($tipo) {
         break;
 
     case 'conversa':
-        $ok = apagarConversa($id);
+        $ok = apagar_conversa($id);
         $mensagemSucesso = 'Conversa com o suporte apagada.';
         $mensagemErro    = 'Não foi possível apagar a conversa.';
         break;
 
     default:
-        header('Location: perfil.php?erro=' . urlencode('Ação inválida.'));
+        header('Location: perfil.php?aba=privacidade&erro=' . urlencode('Ação inválida.'));
         exit();
 }
 
 if ($ok) {
-    header('Location: perfil.php?sucesso=' . urlencode($mensagemSucesso));
+    header('Location: perfil.php?aba=privacidade&sucesso=' . urlencode($mensagemSucesso));
 } else {
-    header('Location: perfil.php?erro=' . urlencode($mensagemErro));
+    header('Location: perfil.php?aba=privacidade&erro=' . urlencode($mensagemErro));
 }
 exit();
