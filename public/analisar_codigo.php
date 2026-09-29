@@ -129,7 +129,13 @@ if ($conversaId === null || !conversaPertenceAoUsuario($conversaId, $_SESSION['i
     exit();
 }
 
-$resultado = chamarIA($texto, $arquivoConteudo, $arquivoNome);
+// Busca as análises anteriores UMA vez: serve para montar a memória da IA
+// e para saber se esta é a primeira mensagem da conversa.
+$analisesAnteriores = buscarAnalisesPorConversa($conversaId);
+$ehPrimeiraMensagem = count($analisesAnteriores) === 0;
+$historico = montarHistoricoParaIA($analisesAnteriores);
+
+$resultado = chamarIA($texto, $arquivoConteudo, $arquivoNome, $historico);
 
 if (!$resultado['sucesso']) {
     http_response_code(502);
@@ -141,8 +147,6 @@ $estruturado = $resultado['resultado']; // array: linguagem, resumo, vulnerabili
 
 $entradaExibida = $texto !== '' ? $texto : ('Arquivo enviado: ' . $arquivoNome);
 
-$ehPrimeiraMensagem = count(buscarAnalisesPorConversa($conversaId)) === 0;
-
 salvarAnalise(
     $_SESSION['id'],
     $conversaId,
@@ -152,7 +156,8 @@ salvarAnalise(
     json_encode($estruturado)
 );
 
-if ($ehPrimeiraMensagem) {
+// Título automático só na primeira mensagem E se o usuário ainda não renomeou a conversa
+if ($ehPrimeiraMensagem && buscarTituloConversa($conversaId) === 'Nova conversa') {
     $tituloGerado = mb_substr(preg_replace('/\s+/', ' ', trim($entradaExibida)), 0, 40);
     if (mb_strlen($entradaExibida) > 40) {
         $tituloGerado .= '...';

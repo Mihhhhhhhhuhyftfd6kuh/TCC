@@ -12,6 +12,12 @@ SYSTEM_PROMPT = """
 Você é um assistente de segurança que analisa trechos de código em busca de
 vulnerabilidades comuns (SQL Injection, XSS, falhas de autenticação, etc).
 
+Você tem acesso ao histórico desta conversa (código e análises anteriores).
+Use esse histórico para manter o contexto: se o usuário fizer uma pergunta de
+acompanhamento (por exemplo, pedir para explicar melhor uma vulnerabilidade
+apontada antes, ou comparar com um código enviado anteriormente), responda
+levando em conta o que já foi dito.
+
 Responda SEMPRE e SOMENTE com um JSON válido, sem nenhum texto antes ou depois,
 sem marcação markdown, seguindo exatamente este formato:
 
@@ -30,25 +36,38 @@ sem marcação markdown, seguindo exatamente este formato:
 
 Se não encontrar nenhuma vulnerabilidade, retorne "vulnerabilidades": [] e um
 resumo dizendo que o código parece seguro dentro do que foi analisado.
+
+Se a mensagem do usuário for uma pergunta e não um código novo, coloque a
+resposta completa no campo "resumo", use "linguagem": null e deixe
+"vulnerabilidades" vazio (ou liste apenas as que forem relevantes para a pergunta).
 """
 
-def analisar_codigo(texto: str, arquivo_conteudo: str | None = None, arquivo_nome: str | None = None) -> dict:
-    partes = []
-    if texto:
-        partes.append(texto)
-    if arquivo_conteudo:
-        partes.append(f"\n\nArquivo enviado ({arquivo_nome}):\n{arquivo_conteudo}")
 
-    conteudo_completo = "\n".join(partes)
+def analisar_codigo(codigo: str, historico: list[dict] | None = None) -> dict:
+    mensagens = []
+
+    for m in historico or []:
+        if m["content"].strip():
+            mensagens.append({"role": m["role"], "content": m["content"]})
+
+    # A API exige que a primeira mensagem seja do usuário
+    while mensagens and mensagens[0]["role"] != "user":
+        mensagens.pop(0)
+
+    mensagens.append({"role": "user", "content": codigo})
 
     resposta = client.messages.create(
         model="claude-sonnet-5",
-        max_tokens=1500,
+        max_tokens=4096,
         system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": conteudo_completo}]
+        messages=mensagens,
     )
 
-    texto_resposta = resposta.content[0].text.strip()
+    # A resposta pode ter blocos de "thinking" antes do texto:
+    # pega só os blocos do tipo "text" e junta.
+    texto_resposta = "".join(
+        bloco.text for bloco in resposta.content if bloco.type == "text"
+    ).strip()
 
     # Remove blocos de markdown, caso o modelo insista em incluir ```json
     texto_resposta = re.sub(r"^```(json)?|```$", "", texto_resposta, flags=re.MULTILINE).strip()
@@ -60,5 +79,5 @@ def analisar_codigo(texto: str, arquivo_conteudo: str | None = None, arquivo_nom
         return {
             "linguagem": None,
             "resumo": texto_resposta,
-            "vulnerabilidades": []
+            "vulnerabilidades": [],
         }

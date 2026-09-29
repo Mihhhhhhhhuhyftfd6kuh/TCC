@@ -35,6 +35,27 @@ function buscarAnalisesPorConversa(int $conversaId): array {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+// Converte as análises já salvas em mensagens (user/assistant) para a IA lembrar da conversa.
+// $limite = quantas trocas (pergunta + resposta) mais recentes enviar.
+function montarHistoricoParaIA(array $analises, int $limite = 10): array {
+    $historico = [];
+
+    foreach (array_slice($analises, -$limite) as $a) {
+        $pergunta = trim((string) ($a['entrada_texto'] ?? ''));
+        $resposta = trim((string) ($a['resultado_json'] ?? ''));
+
+        // A API rejeita mensagens vazias, então pares incompletos são ignorados
+        if ($pergunta === '' || $resposta === '') {
+            continue;
+        }
+
+        $historico[] = ['role' => 'user',      'content' => mb_substr($pergunta, 0, 8000)];
+        $historico[] = ['role' => 'assistant', 'content' => $resposta];
+    }
+
+    return $historico;
+}
+
 function apagarAnalises(int $usuarioId): bool {
     require __DIR__ . "/../config/config.php";
 
@@ -45,8 +66,6 @@ function apagarAnalises(int $usuarioId): bool {
         $stmt1->bindParam(':usuario_id', $usuarioId, PDO::PARAM_INT);
         $stmt1->execute();
 
-        // Apaga também as conversas (a lista da sidebar), já que sem
-        // análises elas ficariam vazias e "fantasmas"
         $stmt2 = $pdo->prepare("DELETE FROM conversas WHERE usuario_id = :usuario_id");
         $stmt2->bindParam(':usuario_id', $usuarioId, PDO::PARAM_INT);
         $stmt2->execute();

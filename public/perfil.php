@@ -161,8 +161,9 @@ if (!in_array($abaAtiva, ['dados', 'privacidade'], true)) {
     <header>
         <div class="logo">Crypher.IA</div>
         <nav>
-            <a href="home.php">home</a>
-            <a href="logout.php">sair</a>
+            <a href="home.php">Home</a>
+            <a href="contato/conversa.php">Contato</a>
+            <a href="painel_api.php">IA</a>
         </nav>
     </header>
 

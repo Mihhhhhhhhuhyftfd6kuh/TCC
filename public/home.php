@@ -3,6 +3,28 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 $usuarioLogado = isset($_SESSION['id']) && $_SESSION['id'] !== null;
+
+// Letra que aparece na bolinha da conta (primeira letra do nome)
+$nomeUsuario = '';
+$inicialUsuario = '?';
+
+if ($usuarioLogado) {
+    try {
+        require __DIR__ . '/../config/config.php';
+
+        $stmtNome = $pdo->prepare("SELECT nome FROM usuarios WHERE id = :id");
+        $stmtNome->bindValue(':id', (int) $_SESSION['id'], PDO::PARAM_INT);
+        $stmtNome->execute();
+
+        $nomeUsuario = trim((string) $stmtNome->fetchColumn());
+
+        if ($nomeUsuario !== '') {
+            $inicialUsuario = mb_strtoupper(mb_substr($nomeUsuario, 0, 1));
+        }
+    } catch (Throwable $e) {
+        // se der erro no banco, a home continua funcionando com "?"
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -115,24 +137,31 @@ nav a:hover{
 }
 
 .conta-botao{
-    background:rgba(255,255,255,0.15);
-    color:#fff;
-    border:1px solid rgba(255,255,255,.35);
+    width:46px;
+    height:46px;
 
-    padding:10px 18px;
-    border-radius:999px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
 
-    font-weight:600;
-    font-size:.95rem;
+    background:#fff;
+    color:#4348D9;
+    border:none;
+    border-radius:50%;
+
+    font-weight:700;
+    font-size:1.15rem;
+    line-height:1;
 
     cursor:pointer;
 
-    backdrop-filter:blur(10px);
+    box-shadow:0 4px 12px rgba(0,0,0,.18);
     transition:.3s ease;
 }
 
 .conta-botao:hover{
-    background:rgba(255,255,255,0.25);
+    transform:translateY(-2px);
+    box-shadow:0 8px 18px rgba(0,0,0,.25);
 }
 
 .conta-dropdown{
@@ -262,7 +291,7 @@ nav a:hover{
     height:auto;       
     max-width:100%;
 
-    border-radius:20px;
+    border-radius:9px;
 
     box-shadow:0 20px 40px rgba(0,0,0,.20);
 }
@@ -1657,7 +1686,7 @@ button {
     <?php if ($usuarioLogado): ?>
 
         <div class="conta-menu">
-            <button type="button" class="conta-botao" onclick="toggleContaMenu();">Minha conta ▾</button>
+            <button type="button" class="conta-botao" onclick="toggleContaMenu();" title="<?= htmlspecialchars($nomeUsuario) ?>" aria-label="Minha conta"><?= htmlspecialchars($inicialUsuario) ?></button>
 
             <div class="conta-dropdown" id="contaDropdown">
                 <a href="perfil.php">Configurações</a>

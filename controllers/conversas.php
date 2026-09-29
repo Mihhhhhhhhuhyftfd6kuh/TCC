@@ -41,6 +41,17 @@ function conversaPertenceAoUsuario(int $conversaId, int $usuarioId): bool {
     return $stmt->fetchColumn() > 0;
 }
 
+function buscarTituloConversa(int $conversaId): ?string {
+    require __DIR__ . "/../config/config.php";
+
+    $sql = "SELECT titulo FROM conversas WHERE id = :id";
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindParam(':id', $conversaId, PDO::PARAM_INT);
+    $stmt->execute();
+    $titulo = $stmt->fetchColumn();
+    return $titulo === false ? null : (string) $titulo;
+}
+
 function atualizarTituloConversa(int $conversaId, string $titulo): void {
     require __DIR__ . "/../config/config.php";
 
@@ -49,4 +60,23 @@ function atualizarTituloConversa(int $conversaId, string $titulo): void {
     $stmt->bindParam(':titulo', $titulo);
     $stmt->bindParam(':id', $conversaId, PDO::PARAM_INT);
     $stmt->execute();
+}
+
+// Renomeia só se a conversa pertencer ao usuário (a checagem está no próprio WHERE)
+function renomearConversa(int $conversaId, int $usuarioId, string $titulo): bool {
+    require __DIR__ . "/../config/config.php";
+
+    $sql = "UPDATE conversas SET titulo = :titulo WHERE id = :id AND usuario_id = :usuario_id";
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindParam(':titulo', $titulo);
+    $stmt->bindParam(':id', $conversaId, PDO::PARAM_INT);
+    $stmt->bindParam(':usuario_id', $usuarioId, PDO::PARAM_INT);
+
+    try {
+        $stmt->execute();
+        return $stmt->rowCount() > 0;
+    } catch (PDOException $e) {
+        error_log("Erro ao renomear conversa: " . $e->getMessage());
+        return false;
+    }
 }
