@@ -129,13 +129,24 @@ if ($conversaId === null || !conversaPertenceAoUsuario($conversaId, $_SESSION['i
     exit();
 }
 
-// Busca as análises anteriores UMA vez: serve para montar a memória da IA
-// e para saber se esta é a primeira mensagem da conversa.
-$analisesAnteriores = buscarAnalisesPorConversa($conversaId);
-$ehPrimeiraMensagem = count($analisesAnteriores) === 0;
-$historico = montarHistoricoParaIA($analisesAnteriores);
+// Busca o histórico já salvo dessa conversa, pra mandar junto pro Claude.
+// Sem isso, cada mensagem era tratada como se fosse a primeira da conversa.
+$historicoBanco = buscarAnalisesPorConversa($conversaId);
 
-$resultado = chamarIA($texto, $arquivoConteudo, $arquivoNome, $historico);
+// Manda só os últimos 10 turnos, pra não deixar a chamada gigante/cara
+// numa conversa muito longa
+$historicoBanco = array_slice($historicoBanco, -10);
+
+$historicoParaIA = array_map(function ($item) {
+    return [
+        'entrada'  => $item['entrada_texto'],
+        'resposta' => json_decode($item['resultado_json'], true),
+    ];
+}, $historicoBanco);
+
+$ehPrimeiraMensagem = count($historicoBanco) === 0;
+
+$resultado = chamarIA($texto, $arquivoConteudo, $arquivoNome, $historicoParaIA);
 
 if (!$resultado['sucesso']) {
     http_response_code(502);
@@ -156,8 +167,7 @@ salvarAnalise(
     json_encode($estruturado)
 );
 
-// Título automático só na primeira mensagem E se o usuário ainda não renomeou a conversa
-if ($ehPrimeiraMensagem && buscarTituloConversa($conversaId) === 'Nova conversa') {
+if ($ehPrimeiraMensagem) {
     $tituloGerado = mb_substr(preg_replace('/\s+/', ' ', trim($entradaExibida)), 0, 40);
     if (mb_strlen($entradaExibida) > 40) {
         $tituloGerado .= '...';

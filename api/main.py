@@ -1,36 +1,26 @@
-from typing import Literal
-
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
-
+from typing import Optional
 from services.claude_service import analisar_codigo
 
 app = FastAPI()
 
-
-class Mensagem(BaseModel):
-    role: Literal["user", "assistant"]
-    content: str
-
-
-class CodigoRequest(BaseModel):
-    codigo: str
-    historico: list[Mensagem] = []
-
+class AnaliseRequest(BaseModel):
+    texto: str = ""
+    arquivo_conteudo: Optional[str] = None
+    arquivo_nome: Optional[str] = None
+    historico: list = []
 
 @app.get("/")
 def home():
     return {"status": "ok"}
 
-
 @app.post("/analisar")
-def analisar(request: CodigoRequest):
-    try:
-        resultado = analisar_codigo(
-            request.codigo,
-            [m.model_dump() for m in request.historico],
-        )
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Falha ao analisar: {e}")
-
+def analisar(request: AnaliseRequest):
+    resultado = analisar_codigo(
+        request.texto,
+        request.arquivo_conteudo,
+        request.arquivo_nome,
+        request.historico,
+    )
     return {"resultado": resultado}

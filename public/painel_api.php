@@ -1552,6 +1552,173 @@ main {
         left: 12px;
     }
 }
+
+/* =========================================================
+   MENU HAMBÚRGUER (mobile)
+   Escondido no desktop; aparece nas telas pequenas.
+========================================================= */
+
+.menu-toggle,
+.menu-mobile {
+    display: none;
+}
+
+.menu-toggle {
+    width: 46px;
+    height: 46px;
+
+    padding: 0;
+    border: none;
+    border-radius: 12px;
+
+    background: rgba(255, 255, 255, .14);
+
+    cursor: pointer;
+
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+
+    -webkit-tap-highlight-color: transparent;
+    transition: background .25s ease;
+}
+
+.menu-toggle:active {
+    background: rgba(255, 255, 255, .28);
+}
+
+.menu-toggle span {
+    display: block;
+
+    width: 24px;
+    height: 3px;
+
+    border-radius: 3px;
+
+    background: #fff;
+
+    transition:
+        transform .3s ease,
+        opacity .2s ease;
+}
+
+/* três linhas viram um X */
+.menu-toggle.aberto span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+.menu-toggle.aberto span:nth-child(2) { opacity: 0; }
+.menu-toggle.aberto span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+
+.menu-mobile {
+    flex-direction: column;
+    gap: 4px;
+
+    background: #3539b8;
+
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+
+    transition:
+        opacity .2s ease,
+        transform .2s ease,
+        visibility .2s ease;
+}
+
+.menu-mobile.aberto {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.menu-mobile a,
+.menu-mobile button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    width: 100%;
+    min-height: 48px;
+
+    padding: 12px 16px;
+
+    border: none;
+    border-radius: 12px;
+
+    background: transparent;
+    color: #fff;
+
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+
+    cursor: pointer;
+
+    transition: background .2s ease;
+}
+
+.menu-mobile a:hover,
+.menu-mobile button:hover,
+.menu-mobile a:active,
+.menu-mobile button:active {
+    background: rgba(255, 255, 255, .14);
+}
+
+.menu-mobile a.ativo {
+    background: #F3BE27;
+    color: #222;
+}
+
+
+/* =========================================================
+   PAINEL DO CHAT — MOBILE
+   Links do header (Home, Contato, Perfil) vão para o menu
+   hambúrguer. Fica no fim do <style> para sobrescrever.
+========================================================= */
+
+@media (max-width: 768px) {
+
+    header {
+        height: 64px;
+        min-height: 64px;
+
+        padding: 0 16px;
+
+        justify-content: space-between;
+    }
+
+    .logo {
+        font-size: 1.6rem;
+    }
+
+    /* esconde os links soltos do header */
+    header nav,
+    header > a[href*="perfil"] {
+        display: none;
+    }
+
+    .menu-toggle {
+        display: flex;
+        flex-shrink: 0;
+    }
+
+    .menu-mobile {
+        display: flex;
+
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+
+        z-index: 40;
+
+        padding: 8px 14px 16px;
+
+        border-radius: 0 0 18px 18px;
+
+        box-shadow: 0 14px 28px rgba(0, 0, 0, .25);
+    }
+}
 </style>
 <body>
     <header>
@@ -1563,6 +1730,18 @@ main {
         </nav>
 
         <a href="perfil.php">Perfil</a>
+            <button type="button" class="menu-toggle" id="menuToggle" aria-label="Abrir menu" aria-controls="menuMobile" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <nav class="menu-mobile" id="menuMobile" aria-label="Menu principal">
+            <a href="home.php"><i class="fa-solid fa-house"></i> Home</a>
+            <a href="contato/conversa.php"><i class="fa-solid fa-envelope"></i> Contato</a>
+            <a href="perfil.php"><i class="fa-solid fa-user"></i> Perfil</a>
+            <button type="button" data-toggle-historico><i class="fa-solid fa-clock-rotate-left"></i> Histórico</button>
+        </nav>
     </header>
 
     <main>
@@ -1808,5 +1987,42 @@ main {
         });
     })();
     </script>
+<script>
+/* ===== Menu hambúrguer (mobile) ===== */
+(() => {
+    const btn  = document.getElementById('menuToggle');
+    const menu = document.getElementById('menuMobile');
+    if (!btn || !menu) return;
+
+    const fechar = () => {
+        btn.classList.remove('aberto');
+        menu.classList.remove('aberto');
+        btn.setAttribute('aria-expanded', 'false');
+    };
+
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const aberto = menu.classList.toggle('aberto');
+        btn.classList.toggle('aberto', aberto);
+        btn.setAttribute('aria-expanded', String(aberto));
+    });
+
+    menu.addEventListener('click', (e) => {
+        if (e.target.closest('a, button')) fechar();
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!menu.contains(e.target) && !btn.contains(e.target)) fechar();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') fechar();
+    });
+
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) fechar();
+    });
+})();
+</script>
 </body>
 </html>

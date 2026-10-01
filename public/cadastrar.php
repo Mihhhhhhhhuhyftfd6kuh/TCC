@@ -683,9 +683,274 @@ a {
         padding-bottom: 35px;
     }
 }
+
+/* =========================================================
+   MENU HAMBÚRGUER (mobile)
+   Escondido no desktop; aparece nas telas pequenas.
+========================================================= */
+
+.menu-toggle,
+.menu-mobile {
+    display: none;
+}
+
+.menu-toggle {
+    width: 46px;
+    height: 46px;
+
+    padding: 0;
+    border: none;
+    border-radius: 12px;
+
+    background: rgba(255, 255, 255, .14);
+
+    cursor: pointer;
+
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+
+    -webkit-tap-highlight-color: transparent;
+    transition: background .25s ease;
+}
+
+.menu-toggle:active {
+    background: rgba(255, 255, 255, .28);
+}
+
+.menu-toggle span {
+    display: block;
+
+    width: 24px;
+    height: 3px;
+
+    border-radius: 3px;
+
+    background: #fff;
+
+    transition:
+        transform .3s ease,
+        opacity .2s ease;
+}
+
+/* três linhas viram um X */
+.menu-toggle.aberto span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+.menu-toggle.aberto span:nth-child(2) { opacity: 0; }
+.menu-toggle.aberto span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+
+.menu-mobile {
+    flex-direction: column;
+    gap: 4px;
+
+    background: #3539b8;
+
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+
+    transition:
+        opacity .2s ease,
+        transform .2s ease,
+        visibility .2s ease;
+}
+
+.menu-mobile.aberto {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.menu-mobile a,
+.menu-mobile button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    width: 100%;
+    min-height: 48px;
+
+    padding: 12px 16px;
+
+    border: none;
+    border-radius: 12px;
+
+    background: transparent;
+    color: #fff;
+
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+
+    cursor: pointer;
+
+    transition: background .2s ease;
+}
+
+.menu-mobile a:hover,
+.menu-mobile button:hover,
+.menu-mobile a:active,
+.menu-mobile button:active {
+    background: rgba(255, 255, 255, .14);
+}
+
+.menu-mobile a.ativo {
+    background: #F3BE27;
+    color: #222;
+}
+
+
+/* =========================================================
+   LOGIN / CADASTRO — MOBILE
+   Painel azul vira uma barra no topo (logo + hambúrguer) e
+   o formulário ocupa o resto da tela.
+   Fica no fim do <style> para sobrescrever as regras acima.
+========================================================= */
+
+@media (max-width: 900px) {
+
+    .menu-toggle {
+        display: flex;
+
+        position: fixed;
+        top: 11px;
+        right: 16px;
+
+        z-index: 100;
+    }
+
+    .menu-mobile {
+        display: flex;
+
+        position: fixed;
+        top: 68px;
+        left: 12px;
+        right: 12px;
+
+        z-index: 99;
+
+        padding: 10px;
+
+        border-radius: 16px;
+
+        box-shadow: 0 14px 30px rgba(0, 0, 0, .28);
+    }
+
+    .container {
+        flex-direction: column;
+        min-height: 100svh;
+    }
+
+    /* barra azul do topo */
+
+    .left-panel {
+        width: 100%;
+        height: 68px;
+        min-height: 68px;
+
+        padding: 0 78px 0 20px;
+
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+    }
+
+    .logo {
+        font-size: 1.7rem;
+    }
+
+    /* o botão grande de trocar de tela agora está no menu */
+    .welcome {
+        display: none;
+    }
+
+    /* formulário */
+
+    .right-panel {
+        width: 100%;
+        min-height: calc(100svh - 68px);
+
+        padding: 32px 20px 40px;
+
+        justify-content: center;
+    }
+
+    .right-panel h1 {
+        font-size: clamp(1.8rem, 8vw, 2.4rem);
+        line-height: 1.15;
+
+        overflow-wrap: break-word;
+    }
+
+    .right-panel p {
+        font-size: .95rem;
+        margin-bottom: 20px;
+    }
+
+    .form-card {
+        width: 100%;
+        max-width: 420px;
+
+        padding: 24px 20px;
+    }
+
+    .form-card label {
+        font-size: .95rem;
+        color: #fff;
+    }
+
+    /* 16px evita o zoom automático do iPhone ao focar no campo */
+    .form-card input {
+        height: 48px;
+        font-size: 16px;
+    }
+
+    .form-card .btn-cadastrar {
+        width: 100%;
+        max-width: 260px;
+        height: 52px;
+    }
+}
+
+@media (max-width: 400px) {
+
+    .left-panel {
+        padding: 0 72px 0 16px;
+    }
+
+    .logo {
+        font-size: 1.5rem;
+    }
+
+    .menu-toggle {
+        right: 12px;
+    }
+
+    .right-panel {
+        padding: 26px 14px 36px;
+    }
+
+    .form-card {
+        padding: 22px 16px;
+    }
+}
 </style>
 </head>
 <body>
+    <!-- menu hambúrguer (mobile) -->
+    <button type="button" class="menu-toggle" id="menuToggle" aria-label="Abrir menu" aria-controls="menuMobile" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+
+    <nav class="menu-mobile" id="menuMobile" aria-label="Menu principal">
+        <a href="home.php">Home</a>
+        <a href="login.php">Login</a>
+        <a href="cadastrar.php" class="ativo">Cadastrar</a>
+    </nav>
+
 
 <div class="container">
 
@@ -847,7 +1112,42 @@ window.addEventListener(
 );
 
 </script>
+<script>
+/* ===== Menu hambúrguer (mobile) ===== */
+(() => {
+    const btn  = document.getElementById('menuToggle');
+    const menu = document.getElementById('menuMobile');
+    if (!btn || !menu) return;
+
+    const fechar = () => {
+        btn.classList.remove('aberto');
+        menu.classList.remove('aberto');
+        btn.setAttribute('aria-expanded', 'false');
+    };
+
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const aberto = menu.classList.toggle('aberto');
+        btn.classList.toggle('aberto', aberto);
+        btn.setAttribute('aria-expanded', String(aberto));
+    });
+
+    menu.addEventListener('click', (e) => {
+        if (e.target.closest('a, button')) fechar();
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!menu.contains(e.target) && !btn.contains(e.target)) fechar();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') fechar();
+    });
+
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 900) fechar();
+    });
+})();
+</script>
 </body>
 </html>
-
-
