@@ -1672,51 +1672,59 @@ main {
 
 /* =========================================================
    PAINEL DO CHAT — MOBILE
-   Links do header (Home, Contato, Perfil) vão para o menu
-   hambúrguer. Fica no fim do <style> para sobrescrever.
+   Header numa linha só: logo à esquerda e hambúrguer à direita
+   (o botão Histórico fica no canto esquerdo do chat, sem encostar).
+   Fica no fim do <style> para sobrescrever as regras acima.
 ========================================================= */
 
 @media (max-width: 768px) {
 
     header {
-        height: 64px;
-        min-height: 64px;
+        flex-direction:row;
+        flex-wrap:nowrap;
+        align-items:center;
+        justify-content:space-between;
 
-        padding: 0 16px;
+        height:64px;
+        min-height:64px;
 
-        justify-content: space-between;
+        padding:0 16px;
+        gap:12px;
     }
 
     .logo {
-        font-size: 1.6rem;
+        font-size:1.6rem;
+        text-align:left;
     }
 
-    /* esconde os links soltos do header */
-    header nav,
+    /* links soltos do header vão para o menu */
+    header > nav,
     header > a[href*="perfil"] {
-        display: none;
+        display:none;
     }
 
     .menu-toggle {
-        display: flex;
-        flex-shrink: 0;
+        display:flex;
+        flex-shrink:0;
+        margin-left:auto;
     }
 
+    /* cartão do menu alinhado à direita, embaixo do botão */
     .menu-mobile {
-        display: flex;
+        display:flex;
 
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
+        position:absolute;
+        top:calc(100% + 6px);
+        right:12px;
+        left:auto;
 
-        z-index: 40;
+        width:min(260px, calc(100vw - 24px));
+        padding:8px;
 
-        padding: 8px 14px 16px;
+        z-index:60;
 
-        border-radius: 0 0 18px 18px;
-
-        box-shadow: 0 14px 28px rgba(0, 0, 0, .25);
+        border-radius:16px;
+        box-shadow:0 14px 28px rgba(0, 0, 0, .28);
     }
 }
 </style>
@@ -1736,12 +1744,12 @@ main {
             <span></span>
         </button>
 
-        <nav class="menu-mobile" id="menuMobile" aria-label="Menu principal">
+        <div class="menu-mobile" id="menuMobile" role="navigation" aria-label="Menu principal">
             <a href="home.php"><i class="fa-solid fa-house"></i> Home</a>
             <a href="contato/conversa.php"><i class="fa-solid fa-envelope"></i> Contato</a>
             <a href="perfil.php"><i class="fa-solid fa-user"></i> Perfil</a>
-            <button type="button" data-toggle-historico><i class="fa-solid fa-clock-rotate-left"></i> Histórico</button>
-        </nav>
+        
+        </div>
     </header>
 
     <main>
