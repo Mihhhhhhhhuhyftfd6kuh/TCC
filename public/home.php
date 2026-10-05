@@ -31,7 +31,7 @@ if ($usuarioLogado) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chypher.IA</title>
+<title>Crypher.IA</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 
@@ -98,6 +98,7 @@ nav a:hover{ opacity:.7; }
 .hero{
     position:relative; z-index:2;
     min-height:100vh;
+    min-height:100svh;
     display:flex; justify-content:space-between; align-items:center;
     padding:120px 80px;
     overflow:hidden;
@@ -155,7 +156,6 @@ nav a:hover{ opacity:.7; }
     nav{ gap:20px; flex-wrap:wrap; justify-content:center; }
     .hero{ padding:180px 20px 50px; }
     .hero-text h1{ font-size:3.5rem; }
-    .image-placeholder{ width:320px; height:320px; font-size:3rem; }
 }
 
 .sobre{ background:#fff; padding:70px 80px 90px; text-align:center; }
@@ -739,27 +739,15 @@ a { text-decoration:none; color:inherit; }
         Crypher.IA
     </div>
 
+    <!-- CORRIGIDO: links diretos (antes era <a> dentro de <button>) -->
     <nav>
-        <button class="buttao_L" type="button" onclick="Verlogar('contato/conversa.php');">
+        <a href="contato/conversa.php" onclick="Verlogar('contato/conversa.php'); return false;">Contato</a>
 
-        <a href="#">Contato</a>
-
-        </button>
-
-        <button class="buttao_L"  type="button" onclick="Verlogar('painel_api.php');">
-
-        <a href="#">IA</a>
-
-        </button>
-
-        <button type="button">
-
+        <a href="painel_api.php" onclick="Verlogar('painel_api.php'); return false;">IA</a>
 
         <a href="#sobre">Sobre nós</a>
-        
-        </button>
-
     </nav>
+
     <?php if ($usuarioLogado): ?>
 
         <div class="conta-menu">
@@ -1067,7 +1055,7 @@ a { text-decoration:none; color:inherit; }
         <div class="membro">
 
             <div class="foto-membro">
-                <img src="..\assets/img/Heittor.png" alt="">
+                <img src="../assets/img/Heittor.png" alt="Heittor Moreira Rodrigues">
             </div>
 
             <h3>Heittor Moreira Rodrigues</h3>
@@ -1079,7 +1067,7 @@ a { text-decoration:none; color:inherit; }
         <div class="membro">
 
             <div class="foto-membro">
-                <img src="..\assets\img\Miria.jpeg" alt="">
+                <img src="../assets/img/Miria.jpeg" alt="Miriã Marques de Oliveira">
             </div>
 
             <h3>Miriã Marques de Oliveira</h3>
@@ -1091,11 +1079,11 @@ a { text-decoration:none; color:inherit; }
         <div class="membro">
 
             <div class="foto-membro">
-                <img src="..\assets\img\Giovana.jpeg" alt="">
+                <img src="../assets/img/Giovana.jpeg" alt="Giovana Akemi Hirayama Botelho">
             </div>
 
             <h3>Giovana Akemi Hirayama Botelho</h3>
-            <p>Responsável pela Documentação</p>
+            <p>Responsável pela Documentação e analista</p>
 
         </div>
 
@@ -1128,8 +1116,8 @@ a { text-decoration:none; color:inherit; }
 
         <span>Nossa missão</span>
 
-        <h2>
-            Soluções pioneiras de cibersegurança orientadas por IA
+        <h2> 
+            Ciberseguraça e IA para um futuro mais seguro.
         </h2>
 
     </div>
@@ -1151,7 +1139,7 @@ a { text-decoration:none; color:inherit; }
     // Vem do PHP: true se a sessão tiver um usuário logado, false se não
     const usuarioLogado = <?= $usuarioLogado ? 'true' : 'false' ?>;
 
-    // Chamada pelos botões da nav que exigem login (Contato, IA)
+    // Chamada pelos botões/links que exigem login (Contato, IA)
     function Verlogar(destino) {
         if (usuarioLogado) {
             window.location.href = destino;
@@ -1223,7 +1211,10 @@ document.addEventListener("DOMContentLoaded", () => {
             };
         }
 
-        for (let i = 0; i < 70; i++) {
+        // CORRIGIDO: menos partículas no celular para não pesar
+        const quantidadeDrops = window.innerWidth <= 768 ? 30 : 70;
+
+        for (let i = 0; i < quantidadeDrops; i++) {
             drops.push(createDrop());
         }
 
@@ -1286,11 +1277,20 @@ document.addEventListener("DOMContentLoaded", () => {
         return 3;                       // Computador
     }
 
+    // CORRIGIDO: lê o gap real que o CSS está usando (0 no celular, 30 no resto)
+    function gapAtual() {
+        const gap = parseFloat(getComputedStyle(track).columnGap);
+        return isNaN(gap) ? 0 : gap;
+    }
+
     function totalPaginas() {
         return Math.ceil(cards.length / cardsPorPagina);
     }
 
     function criarIndicadores() {
+
+        // CORRIGIDO: atualiza antes de contar as páginas
+        cardsPorPagina = quantidadePorPagina();
 
         indicadores.innerHTML = "";
 
@@ -1326,7 +1326,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Largura dos cards
         const container = track.parentElement;
         const larguraContainer = container.clientWidth;
-        const gap = 30;
+        const gap = gapAtual();
 
         const larguraCard = (larguraContainer - gap * (cardsPorPagina - 1)) / cardsPorPagina;
 
