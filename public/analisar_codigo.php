@@ -1,5 +1,6 @@
 <?php
 session_start();
+set_time_limit(300); // análises grandes (código corrigido) podem passar do limite padrão do PHP
 
 require __DIR__ . '/../controllers/ia.php';
 require __DIR__ . '/../controllers/storage.php';
@@ -111,6 +112,10 @@ if (isset($_FILES['arquivo']) && $_FILES['arquivo']['error'] === UPLOAD_ERR_OK) 
         }
 
         $arquivoConteudo = file_get_contents($_FILES['arquivo']['tmp_name']);
+        // Arquivo em Latin-1/Windows-1252 vira UTF-8, senão o JSON pra IA quebrava
+        if ($arquivoConteudo !== false && !mb_check_encoding($arquivoConteudo, 'UTF-8')) {
+            $arquivoConteudo = mb_convert_encoding($arquivoConteudo, 'UTF-8', 'Windows-1252');
+        }
         uploadArquivo($_FILES['arquivo']['tmp_name'], $arquivoNome);
     }
 }
@@ -133,13 +138,14 @@ if ($conversaId === null || !conversaPertenceAoUsuario($conversaId, $_SESSION['i
 // Sem isso, cada mensagem era tratada como se fosse a primeira da conversa.
 $historicoBanco = buscarAnalisesPorConversa($conversaId);
 
-// Manda só os últimos 10 turnos, pra não deixar a chamada gigante/cara
-// numa conversa muito longa
-$historicoBanco = array_slice($historicoBanco, -10);
+// Manda só os últimos 4 turnos (e o Python ainda compacta cada um), pra não
+// gastar token à toa numa conversa longa
+$historicoBanco = array_slice($historicoBanco, -4);
 
 $historicoParaIA = array_map(function ($item) {
     return [
         'entrada'  => $item['entrada_texto'],
+        'arquivo'  => $item['arquivo_nome'] ?? null,
         'resposta' => json_decode($item['resultado_json'], true),
     ];
 }, $historicoBanco);
@@ -164,7 +170,7 @@ salvarAnalise(
     $entradaExibida,
     $arquivoNome,
     $estruturado['linguagem'] ?? null,
-    json_encode($estruturado)
+    json_encode($estruturado, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE)
 );
 
 if ($ehPrimeiraMensagem) {
@@ -175,4 +181,7 @@ if ($ehPrimeiraMensagem) {
     atualizarTituloConversa($conversaId, $tituloGerado);
 }
 
-echo json_encode(['sucesso' => true, 'resultado' => $estruturado, 'entrada' => $entradaExibida]);
+echo json_encode(
+    ['sucesso' => true, 'resultado' => $estruturado, 'entrada' => $entradaExibida, 'arquivo' => $arquivoNome],
+    JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE
+);

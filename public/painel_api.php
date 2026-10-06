@@ -28,6 +28,15 @@ if ($conversaId === null || !conversaPertenceAoUsuario($conversaId, $usuarioId))
 $historico = buscarAnalisesPorConversa($conversaId);
 
 // Resumo de cada conversa pra mostrar como prévia na sidebar (1 -- sidebar mais rica)
+// Ícone (Font Awesome) do anexo conforme a extensão do arquivo
+function iconeAnexo(string $nome): string {
+    $ext = strtolower(pathinfo($nome, PATHINFO_EXTENSION));
+    if ($ext === 'zip') return 'fa-file-zipper';
+    if ($ext === 'sql') return 'fa-database';
+    if ($ext === 'txt') return 'fa-file-lines';
+    return 'fa-file-code';
+}
+
 function resumoConversa(array $c): string {
     $titulo = trim($c['titulo'] ?? '');
     if ($titulo === '' || $titulo === 'Nova conversa') {
@@ -1767,6 +1776,118 @@ main {
         box-shadow:0 14px 28px rgba(0, 0, 0, .28);
     }
 }
+
+/* =========================================================
+   ANEXOS (arquivo enviado aparece junto da mensagem)
+========================================================= */
+
+/* o balão agora tem filhos (chip + texto): o pre-wrap passa pro texto */
+.bubble-user {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    white-space: normal;
+}
+
+.bubble-user .bubble-texto {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.anexo-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+
+    max-width: 100%;
+    padding: 8px 12px;
+
+    border-radius: 11px;
+
+    font-size: .78rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.anexo-chip i {
+    flex-shrink: 0;
+    font-size: 1.05rem;
+}
+
+.anexo-chip .anexo-nome {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.anexo-chip .anexo-tamanho {
+    flex-shrink: 0;
+    font-size: .68rem;
+    font-weight: 500;
+    opacity: .75;
+}
+
+/* dentro do balão azul */
+.bubble-user .anexo-chip {
+    align-self: flex-start;
+    background: rgba(255, 255, 255, .17);
+    color: #fff;
+}
+
+/* antes de enviar (acima da barra de digitação) */
+.anexo-pendente {
+    padding: 8px 55px 0;
+    background: #fff;
+}
+
+.anexo-pendente[hidden] {
+    display: none;
+}
+
+.anexo-pendente .anexo-chip {
+    background: #f1f1fa;
+    color: var(--azul);
+    border: 1px solid #e0e0f2;
+}
+
+.anexo-remover {
+    flex-shrink: 0;
+
+    width: 22px;
+    height: 22px;
+    padding: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+    border-radius: 50%;
+
+    background: rgba(67, 72, 217, .12);
+    color: var(--azul);
+
+    cursor: pointer;
+    transition: background .2s ease, color .2s ease;
+}
+
+.anexo-remover:hover {
+    background: var(--azul);
+    color: #fff;
+}
+
+.anexo-remover i {
+    font-size: .7rem;
+}
+
+@media (max-width: 1050px) {
+    .anexo-pendente { padding: 8px 30px 0; }
+}
+
+@media (max-width: 768px) {
+    .anexo-pendente { padding: 8px 12px 0; }
+}
 </style>
 <body>
     <header>
@@ -1845,7 +1966,15 @@ main {
                         <?php foreach ($historico as $item): ?>
                             <?php $r = json_decode($item['resultado_json'], true) ?: ['linguagem' => null, 'resumo' => '', 'vulnerabilidades' => []]; ?>
 
-                            <div class="bubble-user"><?= htmlspecialchars($item['entrada_texto']) ?></div>
+                            <?php
+                                $arqNome = $item['arquivo_nome'] ?? null;
+                                $textoBolha = (string) $item['entrada_texto'];
+                                // Quando só mandou arquivo, o texto salvo é "Arquivo enviado: nome" — o chip já diz isso
+                                if ($arqNome && $textoBolha === 'Arquivo enviado: ' . $arqNome) {
+                                    $textoBolha = '';
+                                }
+                            ?>
+                            <div class="bubble-user"><?php if ($arqNome): ?><div class="anexo-chip"><i class="fa-solid <?= iconeAnexo($arqNome) ?>"></i><span class="anexo-nome"><?= htmlspecialchars($arqNome) ?></span></div><?php endif; ?><?php if ($textoBolha !== ''): ?><div class="bubble-texto"><?= htmlspecialchars($textoBolha) ?></div><?php endif; ?></div>
 
                             <div class="bubble-ia">
                                 <?php if (!empty($r['linguagem'])): ?>
@@ -1883,6 +2012,15 @@ main {
                     <span>Analisando código...</span>
                 </div>
 
+                <div class="anexo-pendente" id="anexo-pendente" hidden>
+                    <div class="anexo-chip">
+                        <i class="fa-solid fa-file-code" id="anexo-pendente-icone"></i>
+                        <span class="anexo-nome" id="anexo-pendente-nome"></span>
+                        <span class="anexo-tamanho" id="anexo-pendente-tamanho"></span>
+                        <button type="button" class="anexo-remover" id="anexo-remover" title="Remover arquivo" aria-label="Remover arquivo"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                </div>
+
                 <form id="form-analise" class="input-bar" enctype="multipart/form-data">
                     <input type="hidden" name="conversa_id" value="<?= $conversaId ?>">
 
@@ -1890,8 +2028,6 @@ main {
                         <i class="fa-solid fa-upload" id="icone-anexo"></i> Arquivo
                         <input type="file" name="arquivo" id="arquivo" accept=".php,.js,.py,.sql,.html,.css,.txt,.json,.zip">
                     </label>
-
-                    <span class="nome-arquivo" id="nome-arquivo"></span>
 
                     <textarea id="texto" name="texto" placeholder="Cole seu código aqui..." rows="1"></textarea>
                     <button type="submit">Enviar</button>
@@ -1909,7 +2045,11 @@ main {
         const textarea = document.getElementById('texto');
         const inputArquivo = document.getElementById('arquivo');
         const btnAnexo = document.getElementById('btn-anexo');
-        const nomeArquivoEl = document.getElementById('nome-arquivo');
+        const anexoPendente = document.getElementById('anexo-pendente');
+        const anexoPendenteIcone = document.getElementById('anexo-pendente-icone');
+        const anexoPendenteNome = document.getElementById('anexo-pendente-nome');
+        const anexoPendenteTamanho = document.getElementById('anexo-pendente-tamanho');
+        const btnRemoverAnexo = document.getElementById('anexo-remover');
         const statusEl = document.getElementById('status');
         const loadingStatus = document.getElementById('loading-status');
 
@@ -1918,17 +2058,43 @@ main {
             textarea.style.height = Math.min(textarea.scrollHeight, 110) + 'px';
         });
 
-        // 4 -- mostra o nome do arquivo escolhido e destaca o ícone
-        inputArquivo.addEventListener('change', () => {
+        function iconeDoArquivo(nome) {
+            const ext = (nome.split('.').pop() || '').toLowerCase();
+            if (ext === 'zip') return 'fa-file-zipper';
+            if (ext === 'sql') return 'fa-database';
+            if (ext === 'txt') return 'fa-file-lines';
+            return 'fa-file-code';
+        }
+
+        function formatarTamanho(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1).replace('.', ',') + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1).replace('.', ',') + ' MB';
+        }
+
+        // Mostra o arquivo escolhido como um anexo acima da barra de envio
+        function atualizarAnexoPendente() {
             const arquivo = inputArquivo.files[0];
             if (arquivo) {
-                nomeArquivoEl.textContent = arquivo.name;
+                anexoPendenteIcone.className = 'fa-solid ' + iconeDoArquivo(arquivo.name);
+                anexoPendenteNome.textContent = arquivo.name;
+                anexoPendenteTamanho.textContent = formatarTamanho(arquivo.size);
+                anexoPendente.hidden = false;
                 btnAnexo.classList.add('tem-arquivo');
             } else {
-                nomeArquivoEl.textContent = '';
+                anexoPendente.hidden = true;
                 btnAnexo.classList.remove('tem-arquivo');
             }
-        });
+            irParaFinal();
+        }
+
+        function limparAnexo() {
+            inputArquivo.value = '';
+            atualizarAnexoPendente();
+        }
+
+        inputArquivo.addEventListener('change', atualizarAnexoPendente);
+        btnRemoverAnexo.addEventListener('click', limparAnexo);
 
         function escapar(str) {
             const div = document.createElement('div');
@@ -1953,12 +2119,40 @@ main {
             if (chat) chat.scrollTop = chat.scrollHeight;
         }
 
-        function renderizarBubbleUser(texto) {
+        // Balão do usuário: arquivo anexado (chip) + texto digitado, se houver
+        function renderizarBubbleUser(texto, arquivo) {
             garantirChat();
             const div = document.createElement('div');
             div.className = 'bubble-user';
-            div.textContent = texto;
+
+            if (arquivo) {
+                const chip = document.createElement('div');
+                chip.className = 'anexo-chip';
+
+                const icone = document.createElement('i');
+                icone.className = 'fa-solid ' + iconeDoArquivo(arquivo.name);
+
+                const nome = document.createElement('span');
+                nome.className = 'anexo-nome';
+                nome.textContent = arquivo.name;
+
+                const tamanho = document.createElement('span');
+                tamanho.className = 'anexo-tamanho';
+                tamanho.textContent = formatarTamanho(arquivo.size);
+
+                chip.append(icone, nome, tamanho);
+                div.appendChild(chip);
+            }
+
+            if (texto) {
+                const t = document.createElement('div');
+                t.className = 'bubble-texto';
+                t.textContent = texto;
+                div.appendChild(t);
+            }
+
             chat.appendChild(div);
+            return div;
         }
 
         function renderizarBubbleIA(resultado) {
@@ -2020,8 +2214,7 @@ main {
             statusEl.textContent = '';
             loadingStatus.style.display = 'flex'; // 5 -- feedback visível durante a análise
 
-            const entradaExibida = codigo !== '' ? codigo : ('Arquivo enviado: ' + arquivo.name);
-            renderizarBubbleUser(entradaExibida);
+            const bolhaUser = renderizarBubbleUser(codigo, arquivo);
             irParaFinal();
 
             try {
@@ -2039,13 +2232,14 @@ main {
                     renderizarBubbleIA(dados.resultado);
                     textarea.value = '';
                     textarea.style.height = 'auto';
-                    inputArquivo.value = '';
-                    nomeArquivoEl.textContent = '';
-                    btnAnexo.classList.remove('tem-arquivo');
+                    limparAnexo();
                 } else {
+                    // Falhou: tira o balão e mantém texto/arquivo pra tentar de novo sem duplicar
+                    bolhaUser.remove();
                     statusEl.textContent = 'Erro: ' + dados.erro;
                 }
             } catch (erro) {
+                bolhaUser.remove();
                 statusEl.textContent = 'Erro de conexão: ' + erro.message;
             } finally {
                 loadingStatus.style.display = 'none';

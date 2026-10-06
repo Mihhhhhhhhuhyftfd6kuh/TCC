@@ -1,6 +1,8 @@
-import os
 import json
+import os
 import re
+import sys
+
 from anthropic import Anthropic, AuthenticationError, APIConnectionError, APIError
 from dotenv import load_dotenv
 
@@ -8,160 +10,252 @@ load_dotenv()
 
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
-SYSTEM_PROMPT = """
-Você é um assistente de segurança que analisa trechos de código em busca de
-vulnerabilidades comuns (SQL Injection, XSS, falhas de autenticação, etc).
+# Dá pra trocar o modelo pelo .env (ANTHROPIC_MODEL) sem mexer no código.
+# Pra gastar ainda menos, use um modelo menor, ex: claude-haiku-4-5-20251001
+MODELO = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-5")
 
-Essa conversa pode ter mensagens anteriores — use esse contexto quando fizer
-sentido (por exemplo, se o usuário perguntar algo sobre um código já enviado
-antes, ou enviar uma versão corrigida do mesmo código).
+MARCADOR_CODIGO = "###CODIGO###"
 
-Responda SEMPRE e SOMENTE com um JSON válido, sem nenhum texto antes ou depois,
-sem marcação markdown, seguindo exatamente este formato:
+# --- limites pra controlar o gasto de tokens ---------------------------------
+MAX_CHARS_ARQUIVO = 60_000      # acima disso o arquivo é cortado
+MAX_TURNOS_HISTORICO = 4        # só as últimas 4 trocas vão pra IA
+MAX_CHARS_ENTRADA_HIST = 600    # cada pergunta antiga é cortada em 600 caracteres
+MAX_TOKENS_ANALISE = 2500       # análise sem código: curta
+MAX_TOKENS_CODIGO = 32_000      # teto quando o usuário pede o código corrigido
 
-{
-  "linguagem": "nome da linguagem detectada no código (ex: PHP, Python, JavaScript)",
-  "resumo": "resumo geral em 1-2 frases sobre o estado de segurança do código",
-  "vulnerabilidades": [
-    {
-      "titulo": "nome curto da vulnerabilidade",
-      "severidade": "alta, media ou baixa",
-      "explicacao": "por que isso é uma vulnerabilidade, de forma didática",
-      "sugestao": "como corrigir, sem reescrever o código inteiro"
-    }
-  ]
-}
+# --- prompt enxuto -----------------------------------------------------------
+PROMPT_BASE = """Você analisa código em busca de vulnerabilidades de segurança.
+Responda SOMENTE com JSON válido (sem markdown, sem texto fora do JSON):
+{"linguagem":"","resumo":"","vulnerabilidades":[{"titulo":"","severidade":"alta|media|baixa","explicacao":"","sugestao":""}]}
+Regras: seja direto. "resumo": 1 frase. "explicacao" e "sugestao": no máximo 1 frase cada. Agrupe falhas do mesmo tipo em um único item (cite as rotas/trechos na explicação). Sem falhas: "vulnerabilidades":[].
+Use o histórico quando fizer sentido. Se o usuário falar de um código que não está na conversa, peça no "resumo" para reenviar o arquivo."""
 
-Se não encontrar nenhuma vulnerabilidade, retorne "vulnerabilidades": [] e um
-resumo dizendo que o código parece seguro dentro do que foi analisado.
+PROMPT_CODIGO = """
+O usuário pediu o código corrigido. Logo depois do JSON, em uma nova linha, escreva exatamente ###CODIGO### e em seguida o arquivo COMPLETO já corrigido, em texto puro (sem ``` e sem explicações), mantendo estrutura, lógica e nomes e alterando só o necessário. Segredos fixos no código devem passar a vir de variável de ambiente. Se houver vários arquivos, preceda cada um com a linha: // ==== Arquivo: nome ====. Não repita o código dentro do JSON."""
 
-CÓDIGO CORRIGIDO (campo opcional "codigo_corrigido"):
-- Por padrão NÃO inclua esse campo: nas "sugestao" explique como corrigir sem
-  reescrever o código inteiro.
-- Se o usuário pedir explicitamente o código corrigido, o arquivo inteiro
-  corrigido, a versão corrigida ou algo equivalente, adicione ao JSON o campo
-  "codigo_corrigido" com o código COMPLETO já corrigido (não só os trechos
-  alterados), mantendo a estrutura, a lógica e os nomes do original e
-  corrigindo apenas o que for necessário para eliminar as vulnerabilidades.
-- O valor de "codigo_corrigido" é uma string JSON: escape corretamente as
-  quebras de linha (\n), aspas e barras, e NÃO use blocos markdown (```).
-- Se o usuário enviou vários arquivos (.zip), inclua todos os arquivos
-  corrigidos em "codigo_corrigido", cada um precedido de uma linha de
-  comentário com o nome do arquivo, no formato: // ==== Arquivo: nome ====
-- Se o pedido de código corrigido vier sem nenhum código na conversa para
-  corrigir, explique isso no "resumo" e não inclua o campo.
-- Nos demais campos ("resumo", "vulnerabilidades") continue explicando o que
-  foi encontrado e o que mudou na versão corrigida.
-"""
+_PEDIDO_CODIGO = re.compile(
+    r"corrij|corrig|consert|arrum|devolv|reescrev|aplique|vers[aã]o (segura|nova)|\bfix\b|\bpatch\b",
+    re.IGNORECASE,
+)
+
+
+# --- preparo da entrada ------------------------------------------------------
+def _compactar(codigo: str) -> str:
+    """Tira espaços no fim das linhas e linhas em branco repetidas.
+    Não muda o código, só economiza token."""
+    codigo = codigo.replace("\r\n", "\n").replace("\r", "\n")
+    linhas = [linha.rstrip() for linha in codigo.split("\n")]
+    codigo = "\n".join(linhas)
+    return re.sub(r"\n{3,}", "\n\n", codigo).strip()
 
 
 def _montar_historico(historico: list | None) -> list:
-    """Transforma o histórico salvo no banco em mensagens user/assistant
-    alternadas, no formato que a API do Claude espera."""
+    """Histórico compacto: de cada turno antigo vai só a pergunta (cortada) e
+    um JSON mínimo (linguagem, resumo, título+severidade das falhas). A
+    explicação, a sugestão e o código corrigido NÃO são reenviados."""
     mensagens = []
 
-    if not historico:
-        return mensagens
-
-    for turno in historico:
-        entrada = turno.get("entrada") or ""
-        resposta_anterior = dict(turno.get("resposta") or {})
-
-        # Não reenvia o código corrigido inteiro a cada turno (gasta token à toa)
-        if resposta_anterior.get("codigo_corrigido"):
-            resposta_anterior["codigo_corrigido"] = "(código corrigido enviado anteriormente)"
-
+    for turno in (historico or [])[-MAX_TURNOS_HISTORICO:]:
+        entrada = (turno.get("entrada") or "").strip()
         if not entrada:
             continue
+
+        arquivo = turno.get("arquivo")
+        if len(entrada) > MAX_CHARS_ENTRADA_HIST:
+            entrada = entrada[:MAX_CHARS_ENTRADA_HIST] + "…"
+        if arquivo and arquivo not in entrada:
+            entrada = f"[arquivo: {arquivo}] {entrada}"
+
+        anterior = turno.get("resposta") or {}
+        resumo = anterior.get("resumo") or ""
+        if anterior.get("codigo_corrigido"):
+            resumo += " (código corrigido já entregue)"
+
+        compacto = {
+            "linguagem": anterior.get("linguagem"),
+            "resumo": resumo,
+            "vulnerabilidades": [
+                {"titulo": v.get("titulo", ""), "severidade": v.get("severidade", "")}
+                for v in (anterior.get("vulnerabilidades") or [])[:15]
+            ],
+        }
 
         mensagens.append({"role": "user", "content": entrada})
         mensagens.append({
             "role": "assistant",
-            "content": json.dumps(resposta_anterior, ensure_ascii=False)
+            "content": json.dumps(compacto, ensure_ascii=False, separators=(",", ":")),
         })
 
     return mensagens
 
 
+# --- leitura da resposta -----------------------------------------------------
 def _extrair_texto(resposta) -> str:
-    """Pega o texto da resposta olhando o tipo de cada bloco, em vez de
-    assumir que content[0] é sempre texto — o Claude pode devolver um
-    bloco de 'thinking' (raciocínio interno) antes do bloco de texto."""
-    partes = []
+    return "".join(b.text for b in resposta.content if b.type == "text").strip()
 
-    for bloco in resposta.content:
-        if bloco.type == "text":
-            partes.append(bloco.text)
 
-    return "".join(partes).strip()
+def _tirar_cercas(texto: str) -> str:
+    """Remove ``` só no começo e no fim (nunca de dentro do código)."""
+    texto = re.sub(r"^\s*```[a-zA-Z]*\s*\n", "", texto)
+    texto = re.sub(r"\n\s*```\s*$", "", texto)
+    return texto.strip()
+
+
+def _reparar_json(s: str) -> dict | None:
+    """Tenta aproveitar um JSON que veio cortado no meio."""
+    # 1) cortado logo depois de uma chave: {"a":"b", "
+    tentativa = re.sub(r',\s*"[^"]*$', "", s) + "}"
+    try:
+        return json.loads(tentativa)
+    except json.JSONDecodeError:
+        pass
+
+    # 2) cortado no meio da lista: volta até o último objeto completo
+    pos = len(s)
+    for _ in range(60):
+        pos = s.rfind("}", 0, pos)
+        if pos == -1:
+            break
+        for fim in ("", "]}"):
+            try:
+                return json.loads(s[: pos + 1] + fim)
+            except json.JSONDecodeError:
+                continue
+    return None
+
+
+def _ler_json(parte: str) -> dict | None:
+    parte = _tirar_cercas(parte)
+    try:
+        dados = json.loads(parte)
+    except json.JSONDecodeError:
+        ini, fim = parte.find("{"), parte.rfind("}")
+        dados = None
+        if ini != -1 and fim > ini:
+            try:
+                dados = json.loads(parte[ini : fim + 1])
+            except json.JSONDecodeError:
+                pass
+        if dados is None:
+            dados = _reparar_json(parte[ini:] if ini != -1 else parte)
+    return dados if isinstance(dados, dict) else None
+
+
+def _normalizar(dados: dict) -> dict:
+    """Garante o formato que o front espera (e severidade sem acento)."""
+    vulns = []
+    for v in dados.get("vulnerabilidades") or []:
+        if not isinstance(v, dict):
+            continue
+        sev = str(v.get("severidade", "baixa")).lower().replace("é", "e").replace("á", "a")
+        v["severidade"] = sev if sev in ("alta", "media", "baixa") else "baixa"
+        vulns.append(v)
+    dados["vulnerabilidades"] = vulns
+    dados["resumo"] = dados.get("resumo") or ""
+    dados.setdefault("linguagem", None)
+    return dados
 
 
 def _erro_amigavel(resumo: str) -> dict:
-    """Monta uma resposta no mesmo formato de uma análise normal, só que
-    com o resumo explicando o erro — assim o chat mostra uma mensagem
-    útil em vez do PHP cair no genérico 'Resposta inesperada do serviço
-    de IA'."""
-    return {
-        "linguagem": None,
-        "resumo": resumo,
-        "vulnerabilidades": []
-    }
+    return {"linguagem": None, "resumo": resumo, "vulnerabilidades": []}
 
 
+# --- função principal --------------------------------------------------------
 def analisar_codigo(
     texto: str,
     arquivo_conteudo: str | None = None,
     arquivo_nome: str | None = None,
     historico: list | None = None,
 ) -> dict:
-    mensagens = _montar_historico(historico)
+    texto = (texto or "").strip()
+    pede_codigo = bool(_PEDIDO_CODIGO.search(texto))
 
-    partes = []
-    if texto:
-        partes.append(texto)
+    partes = [texto] if texto else []
     if arquivo_conteudo:
-        partes.append(f"\n\nArquivo enviado ({arquivo_nome}):\n{arquivo_conteudo}")
+        codigo = _compactar(arquivo_conteudo)
+        aviso = ""
+        if len(codigo) > MAX_CHARS_ARQUIVO:
+            codigo = codigo[:MAX_CHARS_ARQUIVO]
+            aviso = " (cortado por tamanho: só o início foi enviado)"
+        partes.append(f"Arquivo ({arquivo_nome}){aviso}:\n{codigo}")
 
-    conteudo_completo = "\n".join(partes)
-    mensagens.append({"role": "user", "content": conteudo_completo})
+    conteudo = "\n\n".join(partes)
+    if not conteudo:
+        return _erro_amigavel("Nada para analisar. Cole um código ou envie um arquivo.")
+
+    mensagens = _montar_historico(historico)
+    mensagens.append({"role": "user", "content": conteudo})
+
+    system = PROMPT_BASE + (PROMPT_CODIGO if pede_codigo else "")
+    max_tokens = (
+        min(MAX_TOKENS_CODIGO, 2500 + int(len(conteudo) / 3 * 1.4))
+        if pede_codigo
+        else MAX_TOKENS_ANALISE
+    )
 
     try:
-        resposta = client.messages.create(
-            model="claude-sonnet-5",
-            max_tokens=8000,
-            system=SYSTEM_PROMPT,
-            messages=mensagens
-        )
+        # stream evita timeout em respostas grandes; o resultado final é o mesmo
+        with client.messages.stream(
+            model=MODELO,
+            max_tokens=max_tokens,
+            system=system,
+            messages=mensagens,
+        ) as stream:
+            resposta = stream.get_final_message()
     except AuthenticationError:
         return _erro_amigavel(
-            "Não foi possível autenticar com a API da Anthropic. "
-            "Verifique se ANTHROPIC_API_KEY em api/.env é uma chave válida "
-            "(gerada em console.anthropic.com)."
+            "Não foi possível autenticar com a API da Anthropic. Verifique "
+            "ANTHROPIC_API_KEY em api/.env (chave gerada em console.anthropic.com)."
         )
     except APIConnectionError as e:
         return _erro_amigavel(f"Não foi possível conectar à API da Anthropic: {e}")
     except APIError as e:
         return _erro_amigavel(f"A API da Anthropic retornou um erro: {e}")
 
-    texto_resposta = _extrair_texto(resposta)
+    motivo = resposta.stop_reason
+    print(
+        f"[IA] modelo={MODELO} parada={motivo} "
+        f"tokens_entrada={resposta.usage.input_tokens} "
+        f"tokens_saida={resposta.usage.output_tokens} pede_codigo={pede_codigo}",
+        file=sys.stderr,
+        flush=True,
+    )
 
-    # Resposta cortada no limite de tokens = JSON incompleto
-    if resposta.stop_reason == "max_tokens":
-        return _erro_amigavel(
-            "A resposta ficou grande demais e foi cortada. Tente pedir o código "
-            "corrigido de um arquivo por vez ou de um trecho menor."
-        )
+    bruto = _extrair_texto(resposta)
+    parte_json, _, parte_codigo = bruto.partition(MARCADOR_CODIGO)
 
-    if not texto_resposta:
-        return _erro_amigavel(
-            "A IA não retornou uma resposta em texto dessa vez. Tente novamente."
-        )
+    dados = _ler_json(parte_json)
 
-    # Remove blocos de markdown, caso o modelo insista em incluir ```json
-    texto_resposta = re.sub(r"^```(json)?|```$", "", texto_resposta, flags=re.MULTILINE).strip()
+    if dados is None:
+        if motivo == "refusal":
+            return _erro_amigavel(
+                "A IA recusou processar esse conteúdo (filtro de segurança do modelo). "
+                "Tente enviar um arquivo por vez ou um trecho menor."
+            )
+        if motivo == "max_tokens":
+            return _erro_amigavel(
+                "A resposta foi cortada por tamanho. Tente enviar um arquivo por vez."
+            )
+        return _erro_amigavel(bruto or "A IA não retornou uma resposta em texto. Tente novamente.")
 
-    try:
-        return json.loads(texto_resposta)
-    except json.JSONDecodeError:
-        # Se por algum motivo não veio JSON válido, ainda assim devolve algo utilizável
-        return _erro_amigavel(texto_resposta)
+    dados = _normalizar(dados)
+
+    codigo_corrigido = _tirar_cercas(parte_codigo) if parte_codigo.strip() else ""
+
+    if motivo == "max_tokens":
+        if codigo_corrigido:
+            # código cortado no meio é perigoso de copiar: não entrega
+            codigo_corrigido = ""
+            dados["resumo"] += " (O código corrigido ficou grande demais e foi cortado; peça um arquivo por vez.)"
+        else:
+            dados["resumo"] += " (Resposta cortada por tamanho: a lista pode estar incompleta.)"
+    elif motivo == "refusal":
+        codigo_corrigido = ""
+        dados["resumo"] += " (A IA interrompeu a resposta por um filtro de segurança; tente um arquivo por vez.)"
+    elif pede_codigo and not codigo_corrigido:
+        dados["resumo"] += " (A IA não devolveu o código corrigido; peça novamente.)"
+
+    if codigo_corrigido:
+        dados["codigo_corrigido"] = codigo_corrigido
+
+    return dados

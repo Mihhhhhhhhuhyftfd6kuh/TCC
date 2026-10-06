@@ -30,25 +30,36 @@ function chamarIA(string $texto, ?string $arquivoConteudo = null, ?string $arqui
         'historico'        => $historico,
     ];
 
+    // Arquivos fora de UTF-8 faziam o json_encode devolver false (payload vazio).
+    // SUBSTITUTE troca só os bytes inválidos em vez de derrubar a requisição.
+    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+
+    if ($json === false) {
+        return ['sucesso' => false, 'erro' => 'Não foi possível preparar o conteúdo para a IA: ' . json_last_error_msg()];
+    }
+
     $ch = curl_init($urlApi);
     curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 300); // pedir o código corrigido de um arquivo grande demora mais que 120s
 
     $resposta = curl_exec($ch);
     $erroCurl = curl_error($ch);
+    $statusHttp = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
     curl_close($ch);
 
     if ($erroCurl) {
         return ['sucesso' => false, 'erro' => 'Não foi possível conectar ao serviço de IA: ' . $erroCurl];
     }
 
-    $dados = json_decode($resposta, true);
+    $dados = json_decode((string) $resposta, true);
 
     if (!isset($dados['resultado'])) {
-        return ['sucesso' => false, 'erro' => 'Resposta inesperada do serviço de IA'];
+        error_log("Resposta inesperada da FastAPI (HTTP $statusHttp): " . mb_substr((string) $resposta, 0, 500));
+        return ['sucesso' => false, 'erro' => "Resposta inesperada do serviço de IA (HTTP $statusHttp)"];
     }
 
     return ['sucesso' => true, 'resultado' => $dados['resultado']];
