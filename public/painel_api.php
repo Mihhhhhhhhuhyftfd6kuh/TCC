@@ -12,6 +12,16 @@ if (session_status() === PHP_SESSION_NONE) {
 verificacao_L();
 
 $usuarioId = (int) $_SESSION['id'];
+
+// Nome do usuário logado (usado na bolinha do perfil)
+$sqlNome = "SELECT nome FROM usuarios WHERE id = :id";
+$stmtNome = $pdo->prepare($sqlNome);
+$stmtNome->bindParam(':id', $usuarioId, PDO::PARAM_INT);
+$stmtNome->execute();
+$usuarioAtual = $stmtNome->fetch(PDO::FETCH_ASSOC);
+$nomeAtual = $usuarioAtual['nome'] ?? 'Usuário';
+$inicialUsuario = mb_strtoupper(mb_substr($nomeAtual, 0, 1));
+
 $conversas = buscarConversas($usuarioId);
 
 $conversaId = isset($_GET['conversa']) ? (int) $_GET['conversa'] : null;
@@ -154,8 +164,7 @@ header nav {
     gap: 12px;
 }
 
-header nav a,
-header > a[href*="perfil"] {
+header nav a {
     color: rgba(255, 255, 255, .9);
 
     text-decoration: none;
@@ -185,22 +194,115 @@ nav a:hover{
 }
 
 
-/* perfil (canto direito) */
+/* bolinha da conta (canto direito) */
 
-header > a[href*="perfil"] {
+.header-direita {
     position: absolute;
 
     right: 55px;
     top: 50%;
 
     transform: translateY(-50%);
+
+    display: flex;
+    align-items: center;
+
+    gap: 14px;
 }
 
-header > a[href*="perfil"]:hover {
-    background: var(--amarelo);
+.conta-menu {
+    position: relative;
+
+    flex-shrink: 0;
+}
+
+.conta-botao {
+    width: 46px;
+    height: 46px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #fff;
+    color: var(--azul);
+
+    border: none;
+    border-radius: 50%;
+
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 1.15rem;
+    line-height: 1;
+
+    text-transform: uppercase;
+
+    cursor: pointer;
+
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .18);
+
+    transition: .3s ease;
+}
+
+.conta-botao:hover {
+    transform: translateY(-2px);
+
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .25);
+}
+
+.conta-dropdown {
+    display: none;
+
+    position: absolute;
+
+    top: calc(100% + 10px);
+    right: 0;
+
+    min-width: 190px;
+
+    background: #fff;
+
+    border-radius: 12px;
+
+    overflow: hidden;
+
+    box-shadow: 0 15px 35px rgba(0, 0, 0, .22);
+
+    z-index: 200;
+}
+
+.conta-dropdown.ativo {
+    display: block;
+}
+
+.conta-dropdown a {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 13px 20px;
+
     color: #222;
 
-    transform: translateY(-50%) translateY(-2px);
+    font-size: .9rem;
+    font-weight: 500;
+
+    text-decoration: none;
+
+    transition: .2s ease;
+}
+
+.conta-dropdown a i {
+    width: 16px;
+
+    text-align: center;
+
+    color: var(--azul);
+}
+
+.conta-dropdown a:hover {
+    background: #f2f2f2;
 }
 
 
@@ -1013,7 +1115,7 @@ main {
         padding: 0 30px;
     }
 
-    header > a[href*="perfil"] {
+    .header-direita {
         right: 30px;
     }
 
@@ -1057,25 +1159,41 @@ main {
     }
 
     /* no mobile o menu volta pro fluxo normal */
-    header nav,
-    header > a[href*="perfil"] {
+    header nav {
         position: static;
         transform: none;
-    }
 
-    header > a[href*="perfil"]:hover {
-        transform: translateY(-2px);
-    }
-
-    header nav {
         gap: 3px;
     }
 
-    header nav a,
-    header > a[href*="perfil"] {
+    header nav a {
         padding: 8px 10px;
 
         font-size: .75rem;
+    }
+
+    .header-direita {
+        position: static;
+        transform: none;
+
+        gap: 10px;
+    }
+
+    .conta-botao {
+        width: 40px;
+        height: 40px;
+
+        font-size: 1rem;
+    }
+
+    .conta-botao:hover {
+        transform: none;
+    }
+
+    .conta-dropdown {
+        top: calc(100% + 8px);
+
+        min-width: 180px;
     }
 
     main {
@@ -1747,9 +1865,12 @@ main {
     }
 
     /* links soltos do header vão para o menu */
-    header > nav,
-    header > a[href*="perfil"] {
+    header > nav {
         display:none;
+    }
+
+    .header-direita {
+        gap: 10px;
     }
 
     .menu-toggle {
@@ -1898,18 +2019,28 @@ main {
             <a href="contato/conversa.php">Contato</a>
         </nav>
 
-        <a href="perfil.php">Perfil</a>
+        <div class="header-direita">
+            <div class="conta-menu">
+                <button type="button" class="conta-botao" id="conta-botao" title="Minha conta" aria-haspopup="true" aria-expanded="false">
+                    <?= htmlspecialchars($inicialUsuario) ?>
+                </button>
+
+                <div class="conta-dropdown" id="conta-dropdown">
+                    <a href="perfil.php"><i class="fa-regular fa-user"></i> Meu perfil</a>
+                    <a href="logout.php"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sair</a>
+                </div>
+            </div>
+
             <button type="button" class="menu-toggle" id="menuToggle" aria-label="Abrir menu" aria-controls="menuMobile" aria-expanded="false">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
 
         <div class="menu-mobile" id="menuMobile" role="navigation" aria-label="Menu principal">
             <a href="home.php"><i class="fa-solid fa-house"></i> Home</a>
             <a href="contato/conversa.php"><i class="fa-solid fa-envelope"></i> Contato</a>
-            <a href="perfil.php"><i class="fa-solid fa-user"></i> Perfil</a>
-        
         </div>
     </header>
 
@@ -2262,6 +2393,33 @@ main {
         });
     })();
     </script>
+<script>
+/* ===== Bolinha da conta ===== */
+(() => {
+    const contaBotao = document.getElementById('conta-botao');
+    const contaDropdown = document.getElementById('conta-dropdown');
+    if (!contaBotao || !contaDropdown) return;
+
+    const fecharConta = () => {
+        contaDropdown.classList.remove('ativo');
+        contaBotao.setAttribute('aria-expanded', 'false');
+    };
+
+    contaBotao.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const aberto = contaDropdown.classList.toggle('ativo');
+        contaBotao.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!contaDropdown.contains(e.target)) fecharConta();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') fecharConta();
+    });
+})();
+</script>
 <script>
 /* ===== Menu hambúrguer (mobile) ===== */
 (() => {

@@ -26,12 +26,7 @@
     }
 
     /**
-     * CORREÇÃO 8 — Buscar o nome do usuário logado para enviar via WebSocket.
-     *
-     * Antes: a página não sabia o nome de quem estava logado, então o
-     * JavaScript não conseguia incluir o nome correto na mensagem enviada
-     * ao servidor WebSocket. O destinatário receberia mensagens sem
-     * identificação de quem as enviou.
+     * Buscar o nome do usuário logado (usado na bolinha do perfil).
      */
     $sqlNome = "SELECT nome FROM usuarios WHERE id = :id";
     $stmtNome = $pdo->prepare($sqlNome);
@@ -40,41 +35,61 @@
     $usuarioAtual = $stmtNome->fetch(PDO::FETCH_ASSOC);
     $nomeAtual = $usuarioAtual['nome'] ?? 'Usuário';
 
+    // Inicial exibida na bolinha do perfil
+    $inicialUsuario = mb_strtoupper(mb_substr($nomeAtual, 0, 1));
+
     // Buscar histórico de mensagens do banco ao carregar a página
     $conversa = imprimir_m($id_usuario);
 
-    // Histórico lateral: só o admin tem várias conversas (uma por usuário)
+    // Lista lateral: só o admin tem várias conversas (uma por usuário)
     $listaUsuarios = $ehAdmin ? imprimir_com_conversa() : [];
+
+    // Título do chat
+    $tituloChat = 'Suporte Crypher';
+    if ($ehAdmin) {
+        $tituloChat = 'Usuário #' . (int) $id_usuario;
+        foreach ($listaUsuarios as $u) {
+            if ((int) $u['id'] === (int) $id_usuario) {
+                $tituloChat = $u['nome'];
+                break;
+            }
+        }
+    }
+
+    // Link da aba "Contato" na barra inferior do celular
+    $linkContato = $ehAdmin ? 'admin.php' : 'conversa.php';
 
     $flash_success = $_SESSION['flash_success'] ?? null;
     $flash_error   = $_SESSION['flash_error']   ?? null;
     unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 
-    if(isset($_GET['acao']) && $_GET['acao'] === 'apagar'){
-    if(apagar_conversa($id_usuario)){
-        $_SESSION['flash_success'] = 'Conversa apagada com sucesso.';
-    } else {
-        $_SESSION['flash_error'] = 'Erro ao apagar conversa.';
+    if (isset($_GET['acao']) && $_GET['acao'] === 'apagar') {
+        if (apagar_conversa($id_usuario)) {
+            $_SESSION['flash_success'] = 'Conversa apagada com sucesso.';
+        } else {
+            $_SESSION['flash_error'] = 'Erro ao apagar conversa.';
+        }
+        header("Location: ?id={$id_usuario}");
+        exit();
     }
-    header("Location: ?id={$id_usuario}");
-    exit();
-}
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="theme-color" content="#4348D9">
     <title>Contato - Crypher.IA</title>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../../assets/css/contato.css">
-</head>
-<style>
-    /* =========================================
-   CRYPHER.IA - CONTATO (CHAT EM TELA CHEIA)
-   Histórico à esquerda (só aparece para o admin)
+
+    <style>
+/* =========================================
+   CRYPHER.IA - CONTATO
+   Desktop: banner + coluna lateral + thread
+   Mobile: app de chat em tela cheia com
+   barra de navegação inferior
 ========================================= */
 
 * {
@@ -82,19 +97,28 @@
     padding: 0;
     box-sizing: border-box;
     font-family: 'Poppins', sans-serif;
+
+    -webkit-tap-highlight-color: transparent;
 }
 
 :root {
     --azul: #4348D9;
     --azul-escuro: #3539b8;
+    --azul-claro: #eeeeff;
     --amarelo: #F3BE27;
+    --fundo: #f3f3fa;
     --texto: #202020;
     --borda: #e5e5ee;
 }
 
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
 
 /* =========================================
-   PÁGINA (100% da janela, sem rolagem)
+   PÁGINA (sem rolagem)
 ========================================= */
 
 html,
@@ -106,7 +130,7 @@ body {
 
 body {
     height: 100dvh;
-    background: var(--azul);
+    background: var(--fundo);
     color: var(--texto);
 
     display: flex;
@@ -115,7 +139,7 @@ body {
 
 
 /* =========================================
-   HEADER
+   HEADER (igual ao da Home)
 ========================================= */
 
 header {
@@ -129,11 +153,10 @@ header {
 
     display: flex;
     align-items: center;
+    justify-content: space-between;
 
     position: relative;
     z-index: 10;
-
-    box-shadow: 0 5px 20px rgba(0, 0, 0, .12);
 }
 
 .logo {
@@ -143,8 +166,6 @@ header {
     font-weight: 700;
 
     letter-spacing: -.5px;
-
-    text-decoration: none;
 
     flex-shrink: 0;
 }
@@ -163,11 +184,8 @@ header nav {
     gap: 12px;
 }
 
-header nav a,
-header > a[href*="perfil"] {
+header nav a {
     color: rgba(255, 255, 255, .9);
-
-    text-decoration: none;
 
     font-size: .9rem;
     font-weight: 600;
@@ -178,132 +196,340 @@ header > a[href*="perfil"] {
 
     transition:
         background .25s ease,
-        color .25s ease,
-        transform .25s ease;
+        color .25s ease;
 }
 
 header nav a:hover {
-    background: var(--);
-    color: white;
-
-    
+    background: rgba(255, 255, 255, .15);
+    color: #fff;
 }
 
-nav a:hover{
-    opacity:.7;
+/* bolinha da conta (mesmo estilo da Home) */
+
+.conta-menu {
+    position: relative;
+
+    flex-shrink: 0;
 }
 
-header > a[href*="perfil"] {
+.conta-botao {
+    width: 46px;
+    height: 46px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #fff;
+    color: #4348D9;
+
+    border: none;
+    border-radius: 50%;
+
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 1.15rem;
+    line-height: 1;
+
+    text-transform: uppercase;
+
+    cursor: pointer;
+
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .18);
+
+    transition: .3s ease;
+}
+
+.conta-botao:hover {
+    transform: translateY(-2px);
+
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .25);
+}
+
+.conta-dropdown {
+    display: none;
+
     position: absolute;
 
-    right: 55px;
-    top: 50%;
+    top: calc(100% + 10px);
+    right: 0;
 
-    transform: translateY(-50%);
+    min-width: 190px;
+
+    background: #fff;
+
+    border-radius: 12px;
+
+    overflow: hidden;
+
+    box-shadow: 0 15px 35px rgba(0, 0, 0, .22);
+
+    z-index: 200;
 }
 
-header > a[href*="perfil"]:hover {
-    background: var(--amarelo);
+.conta-dropdown.ativo {
+    display: block;
+}
+
+.conta-dropdown a {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 13px 20px;
+
     color: #222;
 
-    transform: translateY(-50%) translateY(-2px);
+    font-size: .9rem;
+    font-weight: 500;
+
+    transition: .2s ease;
+}
+
+.conta-dropdown a i {
+    width: 16px;
+
+    text-align: center;
+
+    color: var(--azul);
+}
+
+.conta-dropdown a:hover {
+    background: #f2f2f2;
+}
+
+
+/* barra de navegação inferior: só existe no celular */
+
+.nav-mobile {
+    display: none;
 }
 
 
 /* =========================================
-   MAIN + LAYOUT (histórico | chat)
+   BANNER (título da página)
+========================================= */
+
+.hero {
+    flex-shrink: 0;
+
+    padding: 4px 55px 72px;
+
+    background: var(--azul);
+
+    color: #fff;
+}
+
+.hero-conteudo {
+    max-width: 1250px;
+    margin: 0 auto;
+}
+
+.hero h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+
+    letter-spacing: -.3px;
+}
+
+.hero h2 span {
+    color: var(--amarelo);
+}
+
+.hero p {
+    margin-top: 2px;
+
+    color: rgba(255, 255, 255, .8);
+
+    font-size: .85rem;
+}
+
+
+/* =========================================
+   MAIN + LAYOUT (cartões sobre o banner)
 ========================================= */
 
 main {
     flex: 1;
     min-height: 0;
 
-    background: #fff;
+    margin-top: -46px;
+    padding: 0 55px 24px;
+
+    position: relative;
+    z-index: 5;
 }
 
 .layout {
     height: 100%;
+    max-width: 1250px;
+    margin: 0 auto;
 
     display: grid;
 
-    grid-template-columns: 0 minmax(0, 1fr);        /* histórico fechado */
+    grid-template-columns: 300px minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
 
-    transition: grid-template-columns .3s ease;
+    gap: 20px;
 }
 
-.layout.historico-aberto {
-    grid-template-columns: 320px minmax(0, 1fr);    /* histórico aberto */
-}
-
-/* usuário comum: não existe histórico, só o chat */
-.layout.sem-historico {
-    grid-template-columns: minmax(0, 1fr);
+/* fundo escuro atrás da gaveta (só aparece no celular) */
+.overlay {
+    display: none;
 }
 
 
 /* =========================================
-   HISTÓRICO (só admin)
+   COLUNA LATERAL
 ========================================= */
 
-.sidebar {
-    height: 100%;
+.lateral {
     min-width: 0;
+    min-height: 0;
 
-    background: #fafaff;
+    display: flex;
+    flex-direction: column;
 
-    border-right: 1px solid var(--borda);
-
-    overflow: hidden;
-
-    visibility: hidden;
-}
-
-.layout.historico-aberto .sidebar {
-    padding: 18px;
+    gap: 16px;
 
     overflow-y: auto;
     overflow-x: hidden;
-
-    visibility: visible;
 }
 
-.historico-topo {
+.lateral::-webkit-scrollbar,
+.messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.lateral::-webkit-scrollbar-thumb,
+.messages::-webkit-scrollbar-thumb {
+    background: #d1d2e8;
+
+    border-radius: 999px;
+}
+
+.card {
+    padding: 20px;
+
+    background: #fff;
+
+    border-radius: 20px;
+
+    box-shadow: 0 10px 30px rgba(67, 72, 217, .10);
+}
+
+.card-icone {
+    width: 42px;
+    height: 42px;
+
+    margin-bottom: 12px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 13px;
+
+    background: var(--amarelo);
+    color: #222;
+
+    font-size: 1.05rem;
+}
+
+.card h3 {
+    margin-bottom: 6px;
+
+    color: #222;
+
+    font-size: .98rem;
+    font-weight: 700;
+}
+
+.card p {
+    color: #777;
+
+    font-size: .8rem;
+    line-height: 1.55;
+}
+
+.dicas {
+    margin-top: 4px;
+
+    list-style: none;
+}
+
+.dicas li {
+    display: flex;
+    align-items: flex-start;
+
+    gap: 9px;
+
+    padding: 7px 0;
+
+    color: #666;
+
+    font-size: .8rem;
+    line-height: 1.45;
+}
+
+.dicas li i {
+    margin-top: 3px;
+
+    color: var(--azul);
+
+    font-size: .72rem;
+}
+
+/* lista de conversas (admin) */
+
+.card-conversas {
+    flex: 1;
+    min-height: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 18px 12px;
+}
+
+.conversas-topo {
     display: flex;
     align-items: center;
     justify-content: space-between;
 
-    margin-bottom: 16px;
+    margin-bottom: 10px;
+    padding: 0 8px;
 }
 
-.historico-topo h3 {
-    color: #333;
-
-    font-size: 1rem;
-    font-weight: 700;
+.conversas-topo h3 {
+    margin: 0;
 }
 
-.btn-fechar-historico {
-    width: 32px;
-    height: 32px;
+.btn-fechar-lateral {
+    display: none;
+
+    width: 40px;
+    height: 40px;
+
+    align-items: center;
+    justify-content: center;
 
     border: none;
-    border-radius: 9px;
+    border-radius: 50%;
 
-    background: transparent;
+    background: var(--azul-claro);
 
-    color: #999;
+    color: var(--azul);
 
     cursor: pointer;
-
-    transition:
-        background .2s ease,
-        color .2s ease;
 }
 
-.btn-fechar-historico:hover {
-    background: var(--amarelo);
-    color: #222;
+.conversas-lista {
+    flex: 1;
+    min-height: 0;
+
+    overflow-y: auto;
 }
 
 .sidebar-vazia {
@@ -322,30 +548,30 @@ main {
 
     gap: 11px;
 
-    margin-bottom: 7px;
-    padding: 11px;
+    margin-bottom: 4px;
+    padding: 10px;
 
-    border-radius: 13px;
-
-    text-decoration: none;
-    color: inherit;
+    border-left: 4px solid transparent;
+    border-radius: 6px 14px 14px 6px;
 
     transition: background .2s ease;
 }
 
 .conversa-item:hover {
-    background: #f0f0fb;
+    background: #f6f6fd;
 }
 
 .conversa-item.ativa {
-    background: rgba(67, 72, 217, .1);
+    background: var(--azul-claro);
+
+    border-left-color: var(--azul);
 }
 
 .conversa-icone {
     flex-shrink: 0;
 
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
 
     display: flex;
     align-items: center;
@@ -353,10 +579,10 @@ main {
 
     border-radius: 50%;
 
-    background: #eeeeff;
+    background: var(--azul-claro);
     color: var(--azul);
 
-    font-size: .85rem;
+    font-size: .9rem;
     font-weight: 700;
 
     text-transform: uppercase;
@@ -389,7 +615,7 @@ main {
 .conversa-titulo {
     color: #333;
 
-    font-size: .84rem;
+    font-size: .85rem;
     font-weight: 600;
 }
 
@@ -401,33 +627,54 @@ main {
 
 
 /* =========================================
-   CARD DO CHAT
+   CARTÃO DO CHAT
 ========================================= */
 
 .chat-card {
-    height: 100%;
     min-width: 0;
     min-height: 0;
 
     background: #fff;
 
+    border-radius: 22px;
+
+    box-shadow: 0 10px 30px rgba(67, 72, 217, .10);
+
     display: flex;
     flex-direction: column;
-}
 
-/* barra do topo: [Histórico] título ........ status */
+    overflow: hidden;
+}
 
 .chat-topo {
     flex-shrink: 0;
 
-    padding: 14px 55px;
+    padding: 16px 26px;
 
     display: flex;
     align-items: center;
 
-    gap: 14px;
+    gap: 12px;
 
-    border-bottom: 1px solid #ededf4;
+    border-bottom: 3px solid var(--amarelo);
+}
+
+.chat-topo-icone {
+    flex-shrink: 0;
+
+    width: 38px;
+    height: 38px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 11px;
+
+    background: var(--azul);
+    color: #fff;
+
+    font-size: .95rem;
 }
 
 .chat-topo h1 {
@@ -439,57 +686,37 @@ main {
     white-space: nowrap;
     text-overflow: ellipsis;
 
-    color: #333;
+    color: #222;
 
-    font-size: 1.05rem;
-    font-weight: 600;
+    font-size: 1rem;
+    font-weight: 700;
 }
 
-.btn-historico {
+.btn-lateral {
+    display: none;
+
     flex-shrink: 0;
 
-    height: 38px;
+    height: 40px;
 
-    padding: 0 15px;
+    padding: 0 14px;
 
-    display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
 
-    border: 1px solid var(--borda);
+    border: none;
     border-radius: 999px;
 
-    background: #fff;
+    background: var(--azul-claro);
 
     color: var(--azul);
 
     font-family: inherit;
-    font-size: .78rem;
+    font-size: .76rem;
     font-weight: 600;
 
     cursor: pointer;
-
-    transition:
-        background .2s ease,
-        color .2s ease,
-        transform .2s ease;
 }
-
-.btn-historico:hover {
-    background: var(--amarelo);
-    color: #222;
-
-    transform: translateY(-1px);
-}
-
-/* com o histórico aberto no desktop existe o X dentro do painel */
-@media (min-width: 769px) {
-    .layout.historico-aberto .btn-historico {
-        display: none;
-    }
-}
-
-/* status (o JS troca a classe entre online/offline) */
 
 #chat-status {
     flex-shrink: 0;
@@ -514,136 +741,144 @@ main {
 
 
 /* =========================================
-   MENSAGENS (só esta área rola)
+   MENSAGENS (formato de thread)
 ========================================= */
 
 .messages {
     flex: 1;
     min-height: 0;
 
-    padding: 25px 55px;
+    padding: 10px 14px;
 
     overflow-y: auto;
     overflow-x: hidden;
+
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
 
     scroll-behavior: smooth;
 
     display: flex;
     flex-direction: column;
-
-    gap: 14px;
-}
-
-.messages::-webkit-scrollbar,
-.sidebar::-webkit-scrollbar {
-    width: 6px;
-}
-
-.messages::-webkit-scrollbar-thumb,
-.sidebar::-webkit-scrollbar-thumb {
-    background: #d1d2e8;
-
-    border-radius: 999px;
 }
 
 .messages-vazio {
     margin: auto;
 
+    text-align: center;
+
     color: #999;
 
     font-size: .85rem;
-    text-align: center;
 }
 
 .message {
-    align-self: flex-start;
+    display: flex;
 
-    width: fit-content;
-    max-width: 70%;
+    gap: 13px;
 
-    padding: 13px 17px;
+    padding: 12px 14px;
 
-    background: #f5f5fa;
+    border-left: 4px solid transparent;
+    border-radius: 4px 14px 14px 4px;
 
-    border: 1px solid #ededf4;
-
-    border-radius: 17px 17px 17px 5px;
-
-    box-shadow: 0 4px 12px rgba(0, 0, 0, .05);
+    transition: background .2s ease;
 
     animation: aparecerMensagem .25s ease;
 }
 
-/* minhas mensagens ficam à direita */
-.message.minha {
-    align-self: flex-end;
-
-    background: var(--azul);
-
-    border-color: var(--azul);
-
-    border-radius: 17px 17px 5px 17px;
+.message:hover {
+    background: #fafaff;
 }
 
-.message strong {
-    display: block;
+.message.minha {
+    border-left-color: var(--amarelo);
+}
 
-    margin-bottom: 4px;
+.msg-avatar {
+    flex-shrink: 0;
 
+    width: 40px;
+    height: 40px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background: var(--azul-claro);
     color: var(--azul);
 
-    font-size: .8rem;
+    font-size: .95rem;
     font-weight: 700;
+
+    text-transform: uppercase;
 }
 
-.message p {
-    margin: 3px 0;
+.message.minha .msg-avatar {
+    background: var(--amarelo);
+    color: #222;
+}
 
+.msg-corpo {
+    flex: 1;
+    min-width: 0;
+}
+
+.msg-topo {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+
+    gap: 3px 10px;
+}
+
+.msg-topo strong {
     color: #222;
 
     font-size: .88rem;
-    line-height: 1.5;
+    font-weight: 700;
+}
+
+.msg-topo small {
+    color: #aaa;
+
+    font-size: .7rem;
+}
+
+.message p {
+    margin-top: 3px;
+
+    color: #444;
+
+    font-size: .9rem;
+    line-height: 1.55;
 
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 }
 
-.message small {
-    display: block;
-
-    margin-top: 7px;
-
-    color: #999;
-
-    font-size: .67rem;
-}
-
-.message.minha strong,
-.message.minha p {
-    color: #fff;
-}
-
-.message.minha small {
-    color: rgba(255, 255, 255, .75);
-}
-
 .message a {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+
+    max-width: 100%;
 
     margin-top: 5px;
 
-    padding: 6px 10px;
+    padding: 7px 12px;
 
-    background: #eeeef8;
+    background: var(--azul-claro);
 
-    border-radius: 8px;
+    border-radius: 10px;
 
     color: var(--azul);
 
-    text-decoration: none;
+    font-size: .76rem;
+    font-weight: 600;
 
-    font-size: .75rem;
-    font-weight: 500;
+    overflow-wrap: anywhere;
 
     transition: .25s ease;
 }
@@ -667,23 +902,23 @@ main {
 
 
 /* =========================================
-   ALERTAS + BARRA DE ENVIO (fixa embaixo)
+   ALERTAS + CAIXA DE ENVIO
 ========================================= */
 
 .c_mensagem {
     flex-shrink: 0;
 
-    background: #fff;
+    padding: 0 20px 18px;
 
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, .06);
+    background: #fff;
 }
 
 .alerta {
-    margin: 10px 55px 0;
+    margin-bottom: 10px;
 
     padding: 8px 13px;
 
-    border-radius: 9px;
+    border-radius: 10px;
 
     font-size: .78rem;
 }
@@ -699,77 +934,81 @@ main {
 }
 
 #form-mensagem {
-    padding: 12px 55px;
+    border: 2px solid var(--borda);
+    border-radius: 16px;
 
-    display: flex;
-    align-items: center;
+    background: #fafaff;
 
-    gap: 12px;
+    overflow: hidden;
+
+    transition:
+        border-color .2s ease,
+        box-shadow .2s ease,
+        background .2s ease;
 }
 
-/* [ texto .......... ] [Arquivo] [Enviar] */
+#form-mensagem:focus-within {
+    border-color: var(--azul);
+
+    background: #fff;
+
+    box-shadow: 0 0 0 3px rgba(67, 72, 217, .08);
+}
 
 #mensagem {
-    order: 1;
-    flex: 1;
-    min-width: 0;
+    display: block;
 
-    height: 48px;
-    min-height: 48px;
-    max-height: 110px;
+    width: 100%;
+    min-height: 62px;
+    max-height: 130px;
 
-    padding: 12px 16px;
+    padding: 14px 16px 6px;
 
-    border: 2px solid #e5e5ee;
-    border-radius: 14px;
-
+    border: none;
     outline: none;
 
     resize: none;
 
-    background: #fafaff;
+    background: transparent;
 
     color: #222;
 
-    font-size: .85rem;
-    line-height: 1.4;
-
-    transition:
-        border-color .2s ease,
-        box-shadow .2s ease;
-}
-
-#mensagem:focus {
-    border-color: var(--azul);
-
-    box-shadow: 0 0 0 3px rgba(67, 72, 217, .08);
-
-    background: #fff;
+    font-size: .88rem;
+    line-height: 1.5;
 }
 
 #mensagem::placeholder {
-    color: #999;
+    color: #a0a0b0;
+}
+
+.form-rodape {
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 8px 10px 10px 12px;
 }
 
 .btn-anexo {
-    order: 2;
     flex-shrink: 0;
 
-    height: 48px;
+    height: 38px;
 
-    padding: 0 16px;
+    padding: 0 14px;
 
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
 
-    border-radius: 13px;
+    border-radius: 10px;
 
-    background: #f1f1fa;
+    background: #fff;
+    border: 1px solid var(--borda);
 
     color: var(--azul);
 
-    font-size: .8rem;
+    font-size: .78rem;
     font-weight: 600;
 
     cursor: pointer;
@@ -777,15 +1016,14 @@ main {
     transition:
         background .2s ease,
         color .2s ease,
-        transform .2s ease;
+        border-color .2s ease;
 }
 
 .btn-anexo:hover,
 .btn-anexo.tem-arquivo {
     background: var(--amarelo);
+    border-color: var(--amarelo);
     color: #222;
-
-    transform: translateY(-1px);
 }
 
 .btn-anexo input {
@@ -793,13 +1031,11 @@ main {
 }
 
 .nome-arquivo {
-    order: 2;
-
-    max-width: 150px;
+    max-width: 180px;
 
     color: #777;
 
-    font-size: .7rem;
+    font-size: .72rem;
 
     overflow: hidden;
 
@@ -807,22 +1043,35 @@ main {
     text-overflow: ellipsis;
 }
 
+.dica-envio {
+    flex: 1;
+
+    text-align: right;
+
+    color: #b0b0c0;
+
+    font-size: .7rem;
+}
+
 #form-mensagem button[type="submit"] {
-    order: 3;
     flex-shrink: 0;
 
-    height: 48px;
+    height: 40px;
 
-    padding: 0 25px;
+    padding: 0 22px;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
 
     border: none;
-    border-radius: 999px;
+    border-radius: 11px;
 
     background: var(--amarelo);
     color: #222;
 
     font-family: inherit;
-    font-size: .85rem;
+    font-size: .84rem;
     font-weight: 700;
 
     cursor: pointer;
@@ -835,7 +1084,7 @@ main {
 #form-mensagem button[type="submit"]:hover {
     transform: translateY(-2px);
 
-    box-shadow: 0 8px 18px rgba(243, 190, 39, .3);
+    box-shadow: 0 8px 18px rgba(243, 190, 39, .35);
 }
 
 #form-mensagem button[type="submit"]:active {
@@ -853,75 +1102,125 @@ main {
         padding: 0 30px;
     }
 
-    header > a[href*="perfil"] {
-        right: 30px;
-    }
-
-    .chat-topo,
-    .messages {
+    .hero {
         padding-left: 30px;
         padding-right: 30px;
     }
 
-    #form-mensagem {
-        padding: 10px 30px;
+    main {
+        padding-left: 30px;
+        padding-right: 30px;
     }
 
-    .alerta {
-        margin-left: 30px;
-        margin-right: 30px;
+    .layout {
+        grid-template-columns: 250px minmax(0, 1fr);
+
+        gap: 16px;
     }
 }
 
 
 /* =========================================
-   MOBILE (histórico vira gaveta pela esquerda)
+   MOBILE (app de chat em tela cheia)
 ========================================= */
 
 @media (max-width: 768px) {
 
+    /* ---- header compacto: logo + bolinha da conta ---- */
+
     header {
-        height: auto;
-        min-height: 70px;
+        height: calc(58px + env(safe-area-inset-top));
 
-        padding: 12px 18px;
-
-        gap: 12px;
-
-        justify-content: space-between;
+        padding: env(safe-area-inset-top) 18px 0;
     }
 
     .logo {
-        font-size: 1.6rem;
-    }
-
-    header nav,
-    header > a[href*="perfil"] {
-        position: static;
-        transform: none;
-    }
-
-    header > a[href*="perfil"]:hover {
-        transform: translateY(-2px);
+        font-size: 1.4rem;
     }
 
     header nav {
-        gap: 3px;
+        display: none;
     }
 
-    header nav a,
-    header > a[href*="perfil"] {
-        padding: 8px 10px;
+    .conta-botao {
+        width: 40px;
+        height: 40px;
 
-        font-size: .75rem;
+        font-size: 1rem;
     }
 
-    .layout,
-    .layout.historico-aberto {
+    .conta-botao:hover {
+        transform: none;
+    }
+
+    .conta-dropdown {
+        top: calc(100% + 8px);
+
+        min-width: 180px;
+    }
+
+    /* ---- banner some: o título fica no topo do chat ---- */
+
+    .hero {
+        display: none;
+    }
+
+    /* ---- chat ocupa todo o espaço ---- */
+
+    main {
+        margin-top: 0;
+        padding: 0;
+    }
+
+    .layout {
         display: block;
+
+        max-width: none;
     }
 
-    .sidebar {
+    .chat-card {
+        height: 100%;
+
+        border-radius: 0;
+
+        box-shadow: none;
+    }
+
+    .chat-topo {
+        padding: 9px 12px;
+
+        gap: 10px;
+
+        border-bottom-width: 2px;
+    }
+
+    .chat-topo-icone {
+        display: none;
+    }
+
+    .chat-topo h1 {
+        font-size: .95rem;
+    }
+
+    #chat-status {
+        padding: 4px 10px;
+
+        font-size: .66rem;
+    }
+
+    .btn-lateral {
+        display: flex;
+    }
+
+    /* ---- usuário comum: sem coluna lateral ---- */
+
+    .layout.sem-lateral .lateral {
+        display: none;
+    }
+
+    /* ---- admin: lista de conversas vira gaveta ---- */
+
+    .lateral {
         position: fixed;
 
         top: 0;
@@ -929,105 +1228,238 @@ main {
 
         z-index: 50;
 
-        width: min(320px, 85vw);
+        width: min(340px, 88vw);
         height: 100dvh;
 
-        padding: 18px;
+        padding: calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));
 
-        overflow-y: auto;
-
-        visibility: visible;
+        background: var(--fundo);
 
         transform: translateX(-100%);
 
         transition: transform .3s ease;
     }
 
-    .layout.historico-aberto .sidebar {
+    .layout.lateral-aberta .lateral {
         transform: translateX(0);
 
         box-shadow: 10px 0 30px rgba(0, 0, 0, .25);
     }
 
-    .chat-topo {
-        padding: 10px 12px;
+    .overlay {
+        position: fixed;
+        inset: 0;
+
+        z-index: 40;
+
+        display: block;
+
+        background: rgba(20, 20, 60, .5);
+
+        opacity: 0;
+        pointer-events: none;
+
+        transition: opacity .3s ease;
     }
 
+    .layout.lateral-aberta .overlay {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .btn-fechar-lateral {
+        display: flex;
+    }
+
+    .conversa-item {
+        padding: 12px 10px;
+    }
+
+    /* ---- mensagens ---- */
+
     .messages {
-        padding: 18px 12px;
+        padding: 6px 6px;
     }
 
     .message {
-        max-width: 88%;
+        gap: 10px;
+
+        padding: 10px 8px;
+    }
+
+    .msg-avatar {
+        width: 34px;
+        height: 34px;
+
+        border-radius: 10px;
+
+        font-size: .85rem;
+    }
+
+    .msg-topo strong {
+        font-size: .84rem;
+    }
+
+    .message p {
+        font-size: .92rem;
+    }
+
+    /* ---- barra de envio: uma linha só ---- */
+
+    .c_mensagem {
+        padding: 8px 10px 10px;
+
+        border-top: 1px solid var(--borda);
     }
 
     .alerta {
-        margin: 8px 12px 0;
+        margin-bottom: 8px;
     }
 
     #form-mensagem {
-        padding: 9px 12px;
+        display: flex;
+        align-items: flex-end;
 
-        flex-wrap: wrap;
+        gap: 6px;
 
-        gap: 7px;
+        padding: 5px;
+
+        border-radius: 26px;
     }
 
-    #mensagem {
-        flex: 1 1 100%;
+    .form-rodape {
+        display: contents;
     }
 
     .btn-anexo {
-        flex: 1;
+        order: 1;
+
+        width: 44px;
+        height: 44px;
+
+        padding: 0;
 
         justify-content: center;
 
-        height: 44px;
+        border: none;
+        border-radius: 50%;
+
+        background: #fff;
+
+        font-size: 1.05rem;
+    }
+
+    .btn-anexo span {
+        display: none;
+    }
+
+    #mensagem {
+        order: 2;
+        flex: 1;
+        min-width: 0;
+
+        width: auto;
+        min-height: 44px;
+        max-height: 120px;
+
+        padding: 11px 4px;
+
+        /* 16px evita o zoom automático do iPhone ao focar */
+        font-size: 16px;
     }
 
     #form-mensagem button[type="submit"] {
+        order: 3;
+
+        width: 44px;
         height: 44px;
 
-        padding: 0 20px;
-    }
-}
-
-
-/* =========================================
-   CELULAR PEQUENO
-========================================= */
-
-@media (max-width: 480px) {
-
-    header {
-        flex-direction: column;
-
-        align-items: stretch;
-    }
-
-    .logo {
-        text-align: center;
-    }
-
-    header nav {
-        width: 100%;
+        padding: 0;
 
         justify-content: center;
+
+        border-radius: 50%;
+
+        font-size: 1rem;
     }
 
-    header nav a {
+    #form-mensagem button[type="submit"] span {
+        display: none;
+    }
+
+    .nome-arquivo,
+    .dica-envio {
+        display: none;
+    }
+
+    /* ---- barra de navegação inferior ---- */
+
+    .nav-mobile {
+        flex-shrink: 0;
+
+        display: flex;
+
+        padding-bottom: env(safe-area-inset-bottom);
+
+        background: #fff;
+
+        border-top: 1px solid var(--borda);
+    }
+
+    .nav-mobile a {
         flex: 1;
 
-        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
 
-        font-size: .72rem;
+        gap: 3px;
+
+        padding: 8px 0 7px;
+
+        color: #9a9ab0;
+
+        font-size: .66rem;
+        font-weight: 600;
+
+        transition: color .2s ease;
     }
 
-    .nome-arquivo {
+    .nav-mobile a i {
+        font-size: 1.12rem;
+    }
+
+    .nav-mobile a.ativo {
+        color: var(--azul);
+    }
+
+    /* bolinha com a inicial na aba Perfil */
+    .nav-avatar {
+        width: 22px;
+        height: 22px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 50%;
+
+        background: var(--azul);
+        color: #fff;
+
+        font-size: .68rem;
+        font-weight: 700;
+
+        text-transform: uppercase;
+    }
+
+    /* teclado aberto: esconde a barra inferior para sobrar espaço */
+    body.teclado .nav-mobile {
         display: none;
     }
 }
-</style>
+    </style>
+</head>
 <body>
     <header>
         <a href="../home.php" class="logo">Crypher.IA</a>
@@ -1037,64 +1469,115 @@ main {
             <a href="../painel_api.php">IA</a>
         </nav>
 
-        <a href="../perfil.php">Perfil</a>
+        <div class="conta-menu">
+            <button type="button" class="conta-botao" id="conta-botao" title="Minha conta" aria-haspopup="true" aria-expanded="false">
+                <?= htmlspecialchars($inicialUsuario) ?>
+            </button>
+
+            <div class="conta-dropdown" id="conta-dropdown">
+                <a href="../perfil.php"><i class="fa-regular fa-user"></i> Meu perfil</a>
+                <a href="../logout.php"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sair</a>
+            </div>
+        </div>
     </header>
 
+    <section class="hero">
+        <div class="hero-conteudo">
+            <?php if ($ehAdmin): ?>
+                <h2>Central de <span>atendimento</span></h2>
+                <p>Acompanhe e responda as conversas dos usuários.</p>
+            <?php else: ?>
+                <h2>Fale com a <span>gente</span></h2>
+                <p>Tire dúvidas, envie sugestões ou peça ajuda para a nossa equipe.</p>
+            <?php endif; ?>
+        </div>
+    </section>
+
     <main>
-        <div class="layout <?= $ehAdmin ? '' : 'sem-historico' ?>">
+        <div class="layout <?= $ehAdmin ? '' : 'sem-lateral' ?>">
 
             <?php if ($ehAdmin): ?>
-                <aside class="sidebar">
-                    <div class="historico-topo">
-                        <h3>Conversas</h3>
-                        <button type="button" class="btn-fechar-historico" data-toggle-historico title="Fechar histórico">
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
+                <div class="overlay" data-toggle-lateral></div>
+            <?php endif; ?>
+
+            <aside class="lateral">
+                <?php if ($ehAdmin): ?>
+                    <div class="card card-conversas">
+                        <div class="conversas-topo">
+                            <h3>Conversas</h3>
+                            <button type="button" class="btn-fechar-lateral" data-toggle-lateral title="Fechar">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+
+                        <div class="conversas-lista">
+                            <?php if (count($listaUsuarios) === 0): ?>
+                                <div class="sidebar-vazia">Nenhuma conversa ainda.</div>
+                            <?php endif; ?>
+
+                            <?php foreach ($listaUsuarios as $u): ?>
+                                <a href="conversa.php?id=<?= (int) $u['id'] ?>" class="conversa-item <?= ((int) $u['id'] === (int) $id_usuario) ? 'ativa' : '' ?>">
+                                    <span class="conversa-icone"><?= htmlspecialchars(mb_substr($u['nome'], 0, 1)) ?></span>
+                                    <span class="conversa-texto">
+                                        <span class="conversa-titulo"><?= htmlspecialchars($u['nome']) ?></span>
+                                        <span class="conversa-data"><?= htmlspecialchars($u['email']) ?></span>
+                                    </span>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <div class="card">
+                        <div class="card-icone"><i class="fa-solid fa-headset"></i></div>
+                        <h3>Atendimento direto</h3>
+                        <p>Converse com a nossa equipe. Suas mensagens ficam salvas, então você pode voltar aqui quando quiser.</p>
                     </div>
 
-                    <?php if (count($listaUsuarios) === 0): ?>
-                        <div class="sidebar-vazia">Nenhuma conversa ainda.</div>
-                    <?php endif; ?>
-
-                    <?php foreach ($listaUsuarios as $u): ?>
-                        <a href="conversa.php?id=<?= (int) $u['id'] ?>" class="conversa-item <?= ((int) $u['id'] === (int) $id_usuario) ? 'ativa' : '' ?>">
-                            <span class="conversa-icone"><?= htmlspecialchars(mb_substr($u['nome'], 0, 1)) ?></span>
-                            <span class="conversa-texto">
-                                <span class="conversa-titulo"><?= htmlspecialchars($u['nome']) ?></span>
-                                <span class="conversa-data"><?= htmlspecialchars($u['email']) ?></span>
-                            </span>
-                        </a>
-                    <?php endforeach; ?>
-                </aside>
-            <?php endif; ?>
+                    <div class="card">
+                        <h3>Dicas rápidas</h3>
+                        <ul class="dicas">
+                            <li><i class="fa-solid fa-circle"></i> Explique o problema com detalhes.</li>
+                            <li><i class="fa-solid fa-circle"></i> Anexe prints ou arquivos se ajudar.</li>
+                            <li><i class="fa-solid fa-circle"></i> Enter envia, Shift + Enter quebra a linha.</li>
+                        </ul>
+                    </div>
+                <?php endif; ?>
+            </aside>
 
             <div class="chat-card">
                 <div class="chat-topo">
                     <?php if ($ehAdmin): ?>
-                        <button type="button" class="btn-historico" data-toggle-historico>
-                            <i class="fa-solid fa-clock-rotate-left"></i> Histórico
+                        <button type="button" class="btn-lateral" data-toggle-lateral>
+                            <i class="fa-solid fa-list"></i> Conversas
                         </button>
                     <?php endif; ?>
 
-                    <h1><?= $ehAdmin ? 'Conversa com usuário ID: ' . (int) $id_usuario : 'Contato' ?></h1>
+                    <div class="chat-topo-icone"><i class="fa-regular fa-comments"></i></div>
 
-                    
+                    <h1><?= htmlspecialchars($tituloChat) ?></h1>
+
+                    <span id="chat-status" class="online">Conectando...</span>
                 </div>
 
                 <div class="messages" id="messages-container" data-id-usuario="<?= (int) $id_usuario ?>" data-meu-id="<?= (int) $_SESSION['id'] ?>">
                     <?php if ($conversa && count($conversa) > 0): ?>
                         <?php foreach ($conversa as $msg): ?>
                             <div class="message <?= ((int) $msg['id_remetente'] === (int) $_SESSION['id']) ? 'minha' : '' ?>" data-mensagem-id="<?= (int) $msg['id'] ?>">
-                                <strong><?= htmlspecialchars($msg['nome']) ?></strong>
-                                <p><?= htmlspecialchars($msg['mensagem']) ?></p>
-                                <?php if (!empty($msg['arquivo_url'])): ?>
-                                    <p><a href="<?= htmlspecialchars($msg['arquivo_url']) ?>" target="_blank">📎 <?= htmlspecialchars($msg['arquivo_nome']) ?></a></p>
-                                <?php endif; ?>
-                                <small><?= htmlspecialchars($msg['created_at']) ?></small>
+                                <div class="msg-avatar"><?= htmlspecialchars(mb_substr($msg['nome'], 0, 1)) ?></div>
+                                <div class="msg-corpo">
+                                    <div class="msg-topo">
+                                        <strong><?= htmlspecialchars($msg['nome']) ?></strong>
+                                        <small><?= htmlspecialchars($msg['created_at']) ?></small>
+                                    </div>
+                                    <p><?= htmlspecialchars($msg['mensagem']) ?></p>
+                                    <?php if (!empty($msg['arquivo_url'])): ?>
+                                        <a href="<?= htmlspecialchars($msg['arquivo_url']) ?>" target="_blank">📎 <?= htmlspecialchars($msg['arquivo_nome']) ?></a>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <div class="messages-vazio">Nenhuma mensagem ainda. Envie a primeira!</div>
+                        <div class="messages-vazio">Nenhuma mensagem ainda. Envie a primeira! 👋</div>
                     <?php endif; ?>
                 </div>
 
@@ -1106,28 +1589,23 @@ main {
                         <div class="alerta erro"><?= htmlspecialchars($flash_error) ?></div>
                     <?php endif; ?>
 
-                    <!--
-                        CORREÇÃO 9 — O formulário agora é enviado via AJAX (fetch),
-                        sem recarregar a página. Enquanto isso, o chat também busca
-                        mensagens novas periodicamente (polling) para mostrar as
-                        respostas do outro lado em tempo quase real.
-
-                        CORREÇÃO 10 — Adicionado suporte a anexos: enctype
-                        multipart/form-data e um input de arquivo, enviados junto
-                        com a mensagem via FormData (em vez de URLSearchParams, que
-                        não consegue carregar arquivos).
-                    -->
                     <form id="form-mensagem" enctype="multipart/form-data">
-                        <textarea name="mensagem" id="mensagem" placeholder="Digite sua mensagem..." rows="1"></textarea>
+                        <textarea name="mensagem" id="mensagem" placeholder="Escreva sua mensagem..." rows="2"></textarea>
 
-                        <label class="btn-anexo" id="btn-anexo" title="Anexar arquivo">
-                            <i class="fa-solid fa-upload"></i> Arquivo
-                            <input type="file" name="arquivo" id="arquivo-mensagem">
-                        </label>
+                        <div class="form-rodape">
+                            <label class="btn-anexo" id="btn-anexo" title="Anexar arquivo">
+                                <i class="fa-solid fa-paperclip"></i> <span>Anexar</span>
+                                <input type="file" name="arquivo" id="arquivo-mensagem">
+                            </label>
 
-                        <span class="nome-arquivo" id="nome-arquivo"></span>
+                            <span class="nome-arquivo" id="nome-arquivo"></span>
 
-                        <button type="submit">Enviar</button>
+                            <span class="dica-envio">Enter envia · Shift + Enter quebra linha</span>
+
+                            <button type="submit" title="Enviar">
+                                <i class="fa-solid fa-paper-plane"></i> <span>Enviar</span>
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -1135,31 +1613,116 @@ main {
         </div>
     </main>
 
+    <!-- Barra de navegação inferior (só aparece no celular) -->
+    <nav class="nav-mobile">
+        <a href="../home.php">
+            <i class="fa-solid fa-house"></i>
+            <span>Home</span>
+        </a>
+        <a href="../painel_api.php">
+            <i class="fa-solid fa-robot"></i>
+            <span>IA</span>
+        </a>
+        <a href="<?= $linkContato ?>" class="ativo">
+            <i class="fa-regular fa-comments"></i>
+            <span>Contato</span>
+        </a>
+        <a href="../perfil.php">
+            <span class="nav-avatar"><?= htmlspecialchars($inicialUsuario) ?></span>
+            <span>Perfil</span>
+        </a>
+    </nav>
+
     <script>
     (() => {
-        const container    = document.getElementById('messages-container');
-        const form          = document.getElementById('form-mensagem');
+        const container      = document.getElementById('messages-container');
+        const form           = document.getElementById('form-mensagem');
         const textarea       = document.getElementById('mensagem');
-        const inputArquivo    = document.getElementById('arquivo-mensagem');
-        const statusEl        = document.getElementById('chat-status');
-        const btnAnexo        = document.getElementById('btn-anexo');
-        const nomeArquivoEl   = document.getElementById('nome-arquivo');
+        const inputArquivo   = document.getElementById('arquivo-mensagem');
+        const statusEl       = document.getElementById('chat-status');
+        const btnAnexo       = document.getElementById('btn-anexo');
+        const nomeArquivoEl  = document.getElementById('nome-arquivo');
+        const contaBotao     = document.getElementById('conta-botao');
+        const contaDropdown  = document.getElementById('conta-dropdown');
 
         const idUsuario = container.dataset.idUsuario;
         const meuId     = container.dataset.meuId;
 
         const INTERVALO_ATUALIZACAO = 3000; // 3 segundos
+        const ehMobile = () => window.innerWidth <= 768;
 
-        // Histórico lateral (só existe para o admin)
-        const layout = document.querySelector('.layout');
-        if (document.querySelector('.sidebar')) {
-            // no computador começa aberto; no celular começa fechado
-            if (window.innerWidth > 768) layout.classList.add('historico-aberto');
-
-            document.querySelectorAll('[data-toggle-historico]').forEach(btn => {
-                btn.addEventListener('click', () => layout.classList.toggle('historico-aberto'));
-            });
+        // Evita injeção de HTML (XSS) ao desenhar mensagens vindas do servidor
+        function escaparHtml(valor) {
+            return String(valor ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
+
+        // Rola o container de mensagens até o final
+        function irParaFinal() {
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Menu da bolinha (conta): abre ao clicar, fecha ao clicar fora ou com Esc
+        function fecharConta() {
+            contaDropdown.classList.remove('ativo');
+            contaBotao.setAttribute('aria-expanded', 'false');
+        }
+
+        contaBotao.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const aberto = contaDropdown.classList.toggle('ativo');
+            contaBotao.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!contaDropdown.contains(e.target)) fecharConta();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') fecharConta();
+        });
+
+        // Lista de conversas (admin): no celular abre como gaveta
+        const layout = document.querySelector('.layout');
+        document.querySelectorAll('[data-toggle-lateral]').forEach(btn => {
+            btn.addEventListener('click', () => layout.classList.toggle('lateral-aberta'));
+        });
+
+        // Teclado do celular: acompanha a altura visível da tela (corrige o iPhone)
+        function ajustarAltura() {
+            if (window.visualViewport && ehMobile()) {
+                document.body.style.height = window.visualViewport.height + 'px';
+                window.scrollTo(0, 0);
+                irParaFinal();
+            } else {
+                document.body.style.height = '';
+            }
+        }
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', ajustarAltura);
+        }
+        window.addEventListener('resize', ajustarAltura);
+        ajustarAltura();
+
+        // Esconde a barra inferior enquanto o teclado está aberto
+        textarea.addEventListener('focus', () => {
+            if (ehMobile()) document.body.classList.add('teclado');
+        });
+        textarea.addEventListener('blur', () => {
+            document.body.classList.remove('teclado');
+        });
+
+        // Campo de texto cresce conforme a pessoa digita
+        function ajustarTextarea() {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 130) + 'px';
+        }
+        textarea.addEventListener('input', ajustarTextarea);
 
         // Mostra o nome do arquivo escolhido e destaca o botão
         inputArquivo.addEventListener('change', () => {
@@ -1168,30 +1731,43 @@ main {
             btnAnexo.classList.toggle('tem-arquivo', !!arquivo);
         });
 
-        // Rola o container de mensagens até o final
-        function irParaFinal() {
-            container.scrollTop = container.scrollHeight;
-        }
+        // Enter envia no computador; no celular o Enter quebra a linha
+        // (o envio é pelo botão). Shift+Enter sempre quebra linha.
+        textarea.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !ehMobile()) {
+                e.preventDefault();
+                form.requestSubmit();
+            }
+        });
 
-        // Redesenha todas as mensagens recebidas do servidor.
-        // Simples e seguro: sempre reflete exatamente o que está no banco.
+        // Redesenha as mensagens recebidas do servidor
         function renderizarMensagens(mensagens) {
             const idsAtuais = Array.from(container.querySelectorAll('.message'))
                 .map(el => el.dataset.mensagemId);
 
             const idsNovos = mensagens.map(m => String(m.id));
 
-            // Se nada mudou (mesma quantidade/mesmos ids), não redesenha
+            // Se nada mudou, não redesenha
             const igual = idsAtuais.length === idsNovos.length &&
                           idsAtuais.every((id, i) => id === idsNovos[i]);
             if (igual) return;
 
+            if (mensagens.length === 0) {
+                container.innerHTML = '<div class="messages-vazio">Nenhuma mensagem ainda. Envie a primeira! 👋</div>';
+                return;
+            }
+
             container.innerHTML = mensagens.map(m => `
-                <div class="message ${m.minha ? 'minha' : ''}" data-mensagem-id="${m.id}">
-                    <strong>${m.nome}</strong>
-                    <p>${m.mensagem}</p>
-                    ${m.arquivo_url ? `<p><a href="${m.arquivo_url}" target="_blank">📎 ${m.arquivo_nome}</a></p>` : ''}
-                    <small>${m.created_at}</small>
+                <div class="message ${m.minha ? 'minha' : ''}" data-mensagem-id="${escaparHtml(m.id)}">
+                    <div class="msg-avatar">${escaparHtml(String(m.nome ?? '?').charAt(0))}</div>
+                    <div class="msg-corpo">
+                        <div class="msg-topo">
+                            <strong>${escaparHtml(m.nome)}</strong>
+                            <small>${escaparHtml(m.created_at)}</small>
+                        </div>
+                        <p>${escaparHtml(m.mensagem)}</p>
+                        ${m.arquivo_url ? `<a href="${escaparHtml(m.arquivo_url)}" target="_blank">📎 ${escaparHtml(m.arquivo_nome)}</a>` : ''}
+                    </div>
                 </div>
             `).join('');
 
@@ -1212,13 +1788,13 @@ main {
 
                 if (dados.sucesso) {
                     renderizarMensagens(dados.mensagens);
-                    statusEl.textContent = '🟢 Atualizado';
+                    statusEl.textContent = '● Online';
                     statusEl.className = 'online';
                 } else {
                     throw new Error(dados.erro || 'Erro desconhecido');
                 }
             } catch (erro) {
-                statusEl.textContent = '⚫ Sem conexão';
+                statusEl.textContent = '● Sem conexão';
                 statusEl.className = 'offline';
                 console.error('Erro ao buscar mensagens:', erro);
             }
@@ -1234,7 +1810,6 @@ main {
             const resp = await fetch('enviar_mensagem.php', {
                 method: 'POST',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                // sem Content-Type manual: o navegador define o boundary certo sozinho
                 body: corpo
             });
 
@@ -1255,12 +1830,12 @@ main {
             try {
                 await enviarMensagem(texto, arquivo);
                 textarea.value = '';
+                ajustarTextarea();
                 inputArquivo.value = '';
                 nomeArquivoEl.textContent = '';
                 btnAnexo.classList.remove('tem-arquivo');
-                // Atualiza o chat imediatamente após enviar,
-                // sem esperar o próximo ciclo do polling
                 await buscarMensagens();
+                irParaFinal();
             } catch (erro) {
                 alert('Erro ao enviar mensagem: ' + erro.message);
             }
