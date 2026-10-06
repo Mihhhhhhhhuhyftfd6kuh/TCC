@@ -679,6 +679,46 @@ main {
 }
 
 
+/* Código corrigido devolvido pela IA */
+.codigo-corrigido {
+    margin-top: 14px;
+    border-radius: 13px;
+    overflow: hidden;
+    border: 1px solid #2b2d42;
+    background: #1e1f2e;
+}
+.codigo-corrigido-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 14px;
+    background: #2b2d42;
+    color: #fff;
+    font-size: .76rem;
+    font-weight: 700;
+}
+.btn-copiar-codigo {
+    border: none;
+    border-radius: 999px;
+    padding: 5px 12px;
+    background: #F3BE27;
+    color: #222;
+    font-size: .72rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.codigo-corrigido pre {
+    margin: 0;
+    padding: 14px;
+    max-height: 420px;
+    overflow: auto;
+    color: #e8e8f0;
+    font-family: monospace;
+    font-size: .8rem;
+    line-height: 1.55;
+    white-space: pre;
+}
+
 /* =========================================
    CARDS DE VULNERABILIDADE
 ========================================= */
@@ -1821,6 +1861,16 @@ main {
                                         <p><strong>Sugestão:</strong> <?= htmlspecialchars($v['sugestao'] ?? '') ?></p>
                                     </div>
                                 <?php endforeach; ?>
+
+                                <?php if (!empty($r['codigo_corrigido'])): ?>
+                                    <div class="codigo-corrigido">
+                                        <div class="codigo-corrigido-topo">
+                                            <span>Código corrigido</span>
+                                            <button type="button" class="btn-copiar-codigo">Copiar</button>
+                                        </div>
+                                        <pre><code><?= htmlspecialchars($r['codigo_corrigido']) ?></code></pre>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -1933,9 +1983,32 @@ main {
                 `;
             });
 
+            if (resultado.codigo_corrigido) {
+                html += `
+                    <div class="codigo-corrigido">
+                        <div class="codigo-corrigido-topo">
+                            <span>Código corrigido</span>
+                            <button type="button" class="btn-copiar-codigo">Copiar</button>
+                        </div>
+                        <pre><code>${escapar(resultado.codigo_corrigido)}</code></pre>
+                    </div>
+                `;
+            }
+
             div.innerHTML = html;
             chat.appendChild(div);
         }
+
+        // Botão "Copiar" do código corrigido (funciona nas mensagens do histórico e nas novas)
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('.btn-copiar-codigo');
+            if (!btn) return;
+            const codigo = btn.closest('.codigo-corrigido').querySelector('code').textContent;
+            navigator.clipboard.writeText(codigo).then(() => {
+                btn.textContent = 'Copiado!';
+                setTimeout(() => btn.textContent = 'Copiar', 1500);
+            });
+        });
 
         form.addEventListener('submit', async (evento) => {
             evento.preventDefault();

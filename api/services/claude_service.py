@@ -1,7 +1,7 @@
 import os
 import json
 import re
-from anthropic import Anthropic
+from anthropic import Anthropic, AuthenticationError, APIConnectionError, APIError
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -34,6 +34,24 @@ sem marcação markdown, seguindo exatamente este formato:
 
 Se não encontrar nenhuma vulnerabilidade, retorne "vulnerabilidades": [] e um
 resumo dizendo que o código parece seguro dentro do que foi analisado.
+
+CÓDIGO CORRIGIDO (campo opcional "codigo_corrigido"):
+- Por padrão NÃO inclua esse campo: nas "sugestao" explique como corrigir sem
+  reescrever o código inteiro.
+- Se o usuário pedir explicitamente o código corrigido, o arquivo inteiro
+  corrigido, a versão corrigida ou algo equivalente, adicione ao JSON o campo
+  "codigo_corrigido" com o código COMPLETO já corrigido (não só os trechos
+  alterados), mantendo a estrutura, a lógica e os nomes do original e
+  corrigindo apenas o que for necessário para eliminar as vulnerabilidades.
+- O valor de "codigo_corrigido" é uma string JSON: escape corretamente as
+  quebras de linha (\n), aspas e barras, e NÃO use blocos markdown (```).
+- Se o usuário enviou vários arquivos (.zip), inclua todos os arquivos
+  corrigidos em "codigo_corrigido", cada um precedido de uma linha de
+  comentário com o nome do arquivo, no formato: // ==== Arquivo: nome ====
+- Se o pedido de código corrigido vier sem nenhum código na conversa para
+  corrigir, explique isso no "resumo" e não inclua o campo.
+- Nos demais campos ("resumo", "vulnerabilidades") continue explicando o que
+  foi encontrado e o que mudou na versão corrigida.
 """
 
 
@@ -47,7 +65,11 @@ def _montar_historico(historico: list | None) -> list:
 
     for turno in historico:
         entrada = turno.get("entrada") or ""
-        resposta_anterior = turno.get("resposta") or {}
+        resposta_anterior = dict(turno.get("resposta") or {})
+
+        # Não reenvia o código corrigido inteiro a cada turno (gasta token à toa)
+        if resposta_anterior.get("codigo_corrigido"):
+            resposta_anterior["codigo_corrigido"] = "(código corrigido enviado anteriormente)"
 
         if not entrada:
             continue
@@ -74,6 +96,18 @@ def _extrair_texto(resposta) -> str:
     return "".join(partes).strip()
 
 
+def _erro_amigavel(resumo: str) -> dict:
+    """Monta uma resposta no mesmo formato de uma análise normal, só que
+    com o resumo explicando o erro — assim o chat mostra uma mensagem
+    útil em vez do PHP cair no genérico 'Resposta inesperada do serviço
+    de IA'."""
+    return {
+        "linguagem": None,
+        "resumo": resumo,
+        "vulnerabilidades": []
+    }
+
+
 def analisar_codigo(
     texto: str,
     arquivo_conteudo: str | None = None,
@@ -91,21 +125,37 @@ def analisar_codigo(
     conteudo_completo = "\n".join(partes)
     mensagens.append({"role": "user", "content": conteudo_completo})
 
-    resposta = client.messages.create(
-        model="claude-sonnet-5",
-        max_tokens=1500,
-        system=SYSTEM_PROMPT,
-        messages=mensagens
-    )
+    try:
+        resposta = client.messages.create(
+            model="claude-sonnet-5",
+            max_tokens=8000,
+            system=SYSTEM_PROMPT,
+            messages=mensagens
+        )
+    except AuthenticationError:
+        return _erro_amigavel(
+            "Não foi possível autenticar com a API da Anthropic. "
+            "Verifique se ANTHROPIC_API_KEY em api/.env é uma chave válida "
+            "(gerada em console.anthropic.com)."
+        )
+    except APIConnectionError as e:
+        return _erro_amigavel(f"Não foi possível conectar à API da Anthropic: {e}")
+    except APIError as e:
+        return _erro_amigavel(f"A API da Anthropic retornou um erro: {e}")
 
     texto_resposta = _extrair_texto(resposta)
 
+    # Resposta cortada no limite de tokens = JSON incompleto
+    if resposta.stop_reason == "max_tokens":
+        return _erro_amigavel(
+            "A resposta ficou grande demais e foi cortada. Tente pedir o código "
+            "corrigido de um arquivo por vez ou de um trecho menor."
+        )
+
     if not texto_resposta:
-        return {
-            "linguagem": None,
-            "resumo": "A IA não retornou uma resposta em texto dessa vez. Tente novamente.",
-            "vulnerabilidades": []
-        }
+        return _erro_amigavel(
+            "A IA não retornou uma resposta em texto dessa vez. Tente novamente."
+        )
 
     # Remove blocos de markdown, caso o modelo insista em incluir ```json
     texto_resposta = re.sub(r"^```(json)?|```$", "", texto_resposta, flags=re.MULTILINE).strip()
@@ -114,8 +164,4 @@ def analisar_codigo(
         return json.loads(texto_resposta)
     except json.JSONDecodeError:
         # Se por algum motivo não veio JSON válido, ainda assim devolve algo utilizável
-        return {
-            "linguagem": None,
-            "resumo": texto_resposta,
-            "vulnerabilidades": []
-        }
+        return _erro_amigavel(texto_resposta)

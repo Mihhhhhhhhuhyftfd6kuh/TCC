@@ -727,6 +727,65 @@ a { text-decoration:none; color:inherit; }
 @media (max-width: 480px) {
     header .btn-cadastro { display:none; }
 }
+
+/* =========================================================
+   CARROSSEL "COMO FUNCIONA" (somente mobile)
+   No computador/tablet os 4 cards ficam lado a lado como
+   antes. No celular vira 1 card por vez, igual às detecções.
+========================================================= */
+
+.funcao-carrossel { position:relative; width:100%; }
+
+/* setas e bolinhas só existem no celular */
+.funcao-seta,
+.funcao-indicadores { display:none; }
+
+@media (max-width: 768px) {
+
+    .funcao-carrossel { padding:0 42px; }
+
+    .funcao-viewport {
+        width:100%;
+        overflow:hidden;
+        padding:6px 0 20px; /* espaço para a sombra do card não ser cortada */
+    }
+
+    .cards-funcao {
+        display:flex;
+        flex-wrap:nowrap;
+        justify-content:flex-start;
+        gap:0;
+        transition:transform .45s ease;
+        will-change:transform;
+    }
+
+    .card-funcao {
+        flex:0 0 100%;
+        width:100%;
+        max-width:none;
+        min-width:0;
+        min-height:270px;
+    }
+
+    .card-funcao:hover { transform:none; }
+
+    .funcao-seta {
+        display:flex;
+        width:38px;
+        height:38px;
+        font-size:1.1rem;
+    }
+
+    .funcao-indicadores {
+        display:flex;
+        gap:8px;
+        margin-top:6px;
+    }
+}
+
+@media (max-width: 430px) {
+    .funcao-carrossel { padding:0 36px; }
+}
 </style>
 </head>
 <body>
@@ -832,58 +891,89 @@ a { text-decoration:none; color:inherit; }
         Proteja seu site em apenas quatro etapas.
     </p>
 
-    <div class="cards-funcao">
+    <!-- NOVO: carrossel só no mobile (no desktop os cards ficam lado a lado) -->
+    <div class="funcao-carrossel">
 
-        <div class="card-funcao">
+        <button
+            class="carrossel-seta carrossel-prev funcao-seta"
+            id="prevFuncao"
+            type="button"
+            aria-label="Etapa anterior">
+            &#10094;
+        </button>
 
-            <div class="numero-card">01</div>
+        <div class="funcao-viewport">
 
-            <h3>Informe seu site</h3>
+            <div class="cards-funcao" id="funcaoTrack">
 
-            <p>
-                Mande o seu código ou o projeto do seu site para 
-                que IA possa começar a verificação.
-            </p>
+                <div class="card-funcao">
+
+                    <div class="numero-card">01</div>
+
+                    <h3>Informe seu site</h3>
+
+                    <p>
+                        Mande o seu código ou o projeto do seu site para 
+                        que IA possa começar a verificação.
+                    </p>
+
+                </div>
+
+                <div class="card-funcao">
+
+                    <div class="numero-card">02</div>
+
+                    <h3>Análise por IA</h3>
+
+                    <p>
+                        A IA examina seu site procurando vulnerabilidades,
+                        configurações inseguras e possíveis riscos.
+                    </p>
+
+                </div>
+
+                <div class="card-funcao">
+
+                    <div class="numero-card">03</div>
+
+                    <h3>Relatório completo</h3>
+
+                    <p>
+                        Um relatório é gerado mostrando cada problema encontrado
+                        e o nível de risco correspondente.
+                    </p>
+
+                </div>
+
+                <div class="card-funcao">
+
+                    <div class="numero-card">04</div>
+
+                    <h3>Corrija as falhas</h3>
+
+                    <p>
+                        Receba orientações para corrigir as vulnerabilidades e
+                        aumentar a segurança do seu sistema.
+                    </p>
+
+                </div>
+
+            </div>
 
         </div>
 
-        <div class="card-funcao">
+        <button
+            class="carrossel-seta carrossel-next funcao-seta"
+            id="nextFuncao"
+            type="button"
+            aria-label="Próxima etapa">
+            &#10095;
+        </button>
 
-            <div class="numero-card">02</div>
-
-            <h3>Análise por IA</h3>
-
-            <p>
-                A IA examina seu site procurando vulnerabilidades,
-                configurações inseguras e possíveis riscos.
-            </p>
-
-        </div>
-
-        <div class="card-funcao">
-
-            <div class="numero-card">03</div>
-
-            <h3>Relatório completo</h3>
-
-            <p>
-                Um relatório é gerado mostrando cada problema encontrado
-                e o nível de risco correspondente.
-            </p>
-
-        </div>
-
-        <div class="card-funcao">
-
-            <div class="numero-card">04</div>
-
-            <h3>Corrija as falhas</h3>
-
-            <p>
-                Receba orientações para corrigir as vulnerabilidades e
-                aumentar a segurança do seu sistema.
-            </p>
-
+        <div
+            class="carrossel-indicadores funcao-indicadores"
+            id="indicadoresFuncao"
+            aria-label="Navegação das etapas">
         </div>
 
     </div>
@@ -1116,8 +1206,8 @@ a { text-decoration:none; color:inherit; }
 
         <span>Nossa missão</span>
 
-        <h2> 
-            Ciberseguraça e IA para um futuro mais seguro.
+        <h2>
+            Soluções pioneiras de cibersegurança orientadas por IA
         </h2>
 
     </div>
@@ -1211,7 +1301,7 @@ document.addEventListener("DOMContentLoaded", () => {
             };
         }
 
-        // CORRIGIDO: menos partículas no celular para não pesar
+        // menos partículas no celular para não pesar
         const quantidadeDrops = window.innerWidth <= 768 ? 30 : 70;
 
         for (let i = 0; i < quantidadeDrops; i++) {
@@ -1277,7 +1367,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return 3;                       // Computador
     }
 
-    // CORRIGIDO: lê o gap real que o CSS está usando (0 no celular, 30 no resto)
+    // lê o gap real que o CSS está usando (0 no celular, 30 no resto)
     function gapAtual() {
         const gap = parseFloat(getComputedStyle(track).columnGap);
         return isNaN(gap) ? 0 : gap;
@@ -1289,7 +1379,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function criarIndicadores() {
 
-        // CORRIGIDO: atualiza antes de contar as páginas
+        // atualiza antes de contar as páginas
         cardsPorPagina = quantidadePorPagina();
 
         indicadores.innerHTML = "";
@@ -1496,6 +1586,106 @@ document.addEventListener("DOMContentLoaded", () => {
     lista.addEventListener('scroll', () => requestAnimationFrame(marcar), { passive: true });
     window.addEventListener('resize', marcar);
     marcar();
+})();
+</script>
+
+<script>
+/* ===== Como funciona: carrossel (mobile) ===== */
+(() => {
+    const track   = document.getElementById('funcaoTrack');
+    const prev    = document.getElementById('prevFuncao');
+    const next    = document.getElementById('nextFuncao');
+    const bolinhas = document.getElementById('indicadoresFuncao');
+    if (!track || !prev || !next || !bolinhas) return;
+
+    const cards = Array.from(track.querySelectorAll('.card-funcao'));
+    let pagina = 0;
+
+    // O carrossel só funciona até 768px; acima disso o layout normal é mantido
+    const ehMobile = () => window.innerWidth <= 768;
+
+    // cria uma bolinha por card
+    cards.forEach((_, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'carrossel-indicador';
+        b.setAttribute('aria-label', 'Ir para a etapa ' + (i + 1));
+        b.addEventListener('click', () => {
+            pagina = i;
+            atualizar();
+        });
+        bolinhas.appendChild(b);
+    });
+
+    function atualizar() {
+
+        // No computador/tablet: remove tudo que o JS aplicou
+        if (!ehMobile()) {
+            track.style.transform = '';
+            cards.forEach(card => { card.style.flex = ''; });
+            return;
+        }
+
+        if (pagina >= cards.length) pagina = cards.length - 1;
+        if (pagina < 0) pagina = 0;
+
+        // largura visível = largura do container dos cards (gap é 0 no celular)
+        const largura = track.parentElement.clientWidth;
+
+        cards.forEach(card => {
+            card.style.flex = `0 0 ${largura}px`;
+        });
+
+        track.style.transform = `translateX(-${pagina * largura}px)`;
+
+        prev.disabled = pagina === 0;
+        next.disabled = pagina >= cards.length - 1;
+
+        Array.from(bolinhas.children).forEach((b, i) => {
+            b.classList.toggle('ativo', i === pagina);
+            b.setAttribute('aria-current', i === pagina ? 'true' : 'false');
+        });
+    }
+
+    prev.addEventListener('click', () => {
+        if (pagina > 0) {
+            pagina--;
+            atualizar();
+        }
+    });
+
+    next.addEventListener('click', () => {
+        if (pagina < cards.length - 1) {
+            pagina++;
+            atualizar();
+        }
+    });
+
+    // Swipe com o dedo
+    let toqueInicial = 0;
+
+    track.addEventListener('touchstart', (e) => {
+        toqueInicial = e.touches[0].clientX;
+    }, { passive: true });
+
+    track.addEventListener('touchend', (e) => {
+        if (!ehMobile()) return;
+
+        const distancia = toqueInicial - e.changedTouches[0].clientX;
+
+        if (distancia > 50 && pagina < cards.length - 1) {
+            pagina++;
+            atualizar();
+        } else if (distancia < -50 && pagina > 0) {
+            pagina--;
+            atualizar();
+        }
+    }, { passive: true });
+
+    window.addEventListener('resize', atualizar);
+    window.addEventListener('load', atualizar);
+
+    atualizar();
 })();
 </script>
 
