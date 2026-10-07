@@ -2,13 +2,16 @@
 require __DIR__ . '/../config/config.php';
 require __DIR__ . '/../controllers/auth.php';
 
+    $erroCadastro = null;
+
     if($_SERVER['REQUEST_METHOD'] === 'POST'){
         $nome = $_POST['nome'] ?? null ;
         $email = $_POST['email'] ?? null ;
         $senha = $_POST['senha'] ?? null ;
 
-        cadastrar($nome, $email, $senha);
-        exit();
+        // Em caso de sucesso, cadastrar() já redireciona pro login e dá exit();
+        // só volta aqui (sem exit) quando há um erro, como e-mail duplicado.
+        $erroCadastro = cadastrar($nome, $email, $senha);
         }
 
 ?>
@@ -19,6 +22,8 @@ require __DIR__ . '/../controllers/auth.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+        <link rel="icon" type="image/x-icon" href="../assets/img/mascote_s_fundo.png">
+
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
 
@@ -336,6 +341,33 @@ body {
 
     margin-left: 0;
     margin-top: 5px;
+}
+
+
+/* =========================================
+   AVISO DE ERRO NO CADASTRO
+========================================= */
+
+.aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+
+    width: 100%;
+
+    padding: 12px 16px;
+    margin-bottom: 18px;
+
+    border-radius: 10px;
+
+    font-size: .9rem;
+    line-height: 1.4;
+}
+
+.aviso-erro {
+    background: rgba(220, 53, 69, .12);
+    color: #ffd7da;
+    border: 1px solid rgba(220, 53, 69, .55);
 }
 
 
@@ -998,13 +1030,17 @@ a {
 
         <div class="form-card">
 
+            <?php if ($erroCadastro): ?>
+                <div class="aviso aviso-erro"><?= htmlspecialchars($erroCadastro) ?></div>
+            <?php endif; ?>
+
             <form method="post">
 
                 <label>Nome:</label>
-                <input type="nome" name="nome">
+                <input type="text" name="nome" value="<?= htmlspecialchars($_POST['nome'] ?? '') ?>">
 
                 <label>E-mail:</label>
-                <input type="email" name="email">
+                <input type="email" name="email" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
 
                 <label>Senha:</label>
                 <input type="password" name="senha">

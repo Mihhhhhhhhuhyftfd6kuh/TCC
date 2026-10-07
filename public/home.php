@@ -37,7 +37,7 @@ if ($usuarioLogado) {
 
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-<link rel="icon" type="image/x-icon" href="../assets/img/mascote.jpeg">
+<link rel="icon" type="image/x-icon" href="../assets/img/mascote_s_fundo.png">
 <style>
 body { background: #4348D9; }
 
@@ -77,14 +77,16 @@ nav a:hover{ opacity:.7; }
 .conta-botao{
     width:46px; height:46px;
     display:flex; align-items:center; justify-content:center;
-    background:#fff; color:#4348D9;
-    border:none; border-radius:50%;
+    background:linear-gradient(145deg, #ffffff, #F3BE27);
+    color:#4348D9;
+    border:2px solid #fff;
+    border-radius:50%;
     font-weight:700; font-size:1.15rem; line-height:1;
     cursor:pointer;
-    box-shadow:0 4px 12px rgba(0,0,0,.18);
+    box-shadow:0 4px 14px rgba(0,0,0,.22);
     transition:.3s ease;
 }
-.conta-botao:hover{ transform:translateY(-2px); box-shadow:0 8px 18px rgba(0,0,0,.25); }
+.conta-botao:hover{ transform:translateY(-2px) scale(1.05); box-shadow:0 10px 20px rgba(0,0,0,.3); }
 
 .conta-dropdown{
     display:none; position:absolute; top:calc(100% + 10px); right:0;
@@ -521,21 +523,47 @@ button { border:none; outline:none; background:transparent; }
 
 a { text-decoration:none; color:inherit; }
 
-/* Modal de aviso de login */
+/* Aviso de login (toast dispensável, não é mais um modal bloqueante) */
 .modal-overlay{
-    display:none; position:fixed; inset:0;
-    background:rgba(0,0,0,.6); z-index:1000;
-    align-items:center; justify-content:center;
+    display:flex; position:fixed; top:25px; right:25px; left:auto; inset:auto;
+    z-index:1000; justify-content:flex-end;
+    pointer-events:none;
 }
-.modal-overlay.ativo{ display:flex; }
 
 .modal-caixa{
-    background:#fff; padding:34px 40px; border-radius:16px;
-    text-align:center; max-width:360px; width:90%;
-    box-shadow:0 20px 50px rgba(0,0,0,.3);
+    position:relative;
+    background:#fff; padding:20px 42px 20px 24px; border-radius:14px;
+    text-align:left; max-width:360px; width:90vw;
+    box-shadow:0 20px 45px rgba(0,0,0,.25);
+    border-left:5px solid #F3BE27;
+    opacity:0; transform:translateY(-14px) translateX(8px);
+    visibility:hidden;
+    pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease, visibility .25s ease;
 }
-.modal-caixa h3{ color:#222; font-size:1.3rem; margin-bottom:10px; }
-.modal-caixa p{ color:#555; font-size:.95rem; line-height:1.5; }
+.modal-overlay.ativo .modal-caixa{
+    opacity:1; transform:translateY(0) translateX(0);
+    visibility:visible;
+    pointer-events:auto;
+}
+
+.modal-caixa h3{ color:#222; font-size:1.1rem; margin-bottom:6px; }
+.modal-caixa p{ color:#555; font-size:.88rem; line-height:1.5; }
+
+.modal-fechar{
+    position:absolute; top:10px; right:12px;
+    width:26px; height:26px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:50%;
+    color:#888; font-size:1.2rem; line-height:1;
+    cursor:pointer; transition:.2s ease;
+}
+.modal-fechar:hover{ background:#f2f2f2; color:#222; }
+
+@media(max-width:768px){
+    .modal-overlay{ top:14px; right:14px; left:14px; justify-content:stretch; }
+    .modal-caixa{ max-width:100%; width:100%; }
+}
 
 
 /* =========================================================
@@ -842,8 +870,9 @@ a { text-decoration:none; color:inherit; }
 
 <div class="modal-overlay" id="modalLogin">
     <div class="modal-caixa">
+        <span class="modal-fechar" onclick="fecharModalLogin()" role="button" aria-label="Fechar aviso">&times;</span>
         <h3>Você precisa estar logado</h3>
-        <p>Essa área é exclusiva para usuários cadastrados. Te levando para o login...</p>
+        <p>Essa área é exclusiva para usuários cadastrados. <a href="login.php" style="color:#4348D9; font-weight:600;">Faça login</a> para continuar.</p>
     </div>
 </div>
 
@@ -1242,10 +1271,10 @@ a { text-decoration:none; color:inherit; }
     function mostrarModalLogin() {
         const modal = document.getElementById('modalLogin');
         modal.classList.add('ativo');
+    }
 
-        setTimeout(() => {
-            window.location.href = 'login.php';
-        }, 2500);
+    function fecharModalLogin() {
+        document.getElementById('modalLogin').classList.remove('ativo');
     }
 
     // Abre/fecha o menu "Minha conta" (Configurações / Sair)

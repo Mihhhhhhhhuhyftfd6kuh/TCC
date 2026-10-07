@@ -88,6 +88,13 @@ if (isset($_FILES['arquivo']) && $_FILES['arquivo']['error'] === UPLOAD_ERR_OK) 
                 continue;
             }
 
+            // Mesma conversão feita pro arquivo solto (fora do zip): sem isso,
+            // um arquivo em Latin-1/Windows-1252 dentro do .zip quebrava o
+            // json_encode (payload vazio) e a IA nem chegava a ser chamada.
+            if (!mb_check_encoding($conteudo, 'UTF-8')) {
+                $conteudo = mb_convert_encoding($conteudo, 'UTF-8', 'Windows-1252');
+            }
+
             $conteudoConcatenado .= "\n\n// ==== Arquivo: {$nomeInterno} ====\n" . $conteudo;
             $arquivosLidos++;
         }

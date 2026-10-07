@@ -38,6 +38,7 @@ if (!in_array($abaAtiva, ['dados', 'privacidade'], true)) {
     <title>Meu perfil - Crypher.IA</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="../assets/img/mascote_s_fundo.png">
 
     <style>
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
@@ -52,7 +53,14 @@ if (!in_array($abaAtiva, ['dados', 'privacidade'], true)) {
             align-items:center;
         }
 
-        header .logo { color:#fff; font-size:1.6rem; font-weight:700; }
+        header .logo {
+            color:#fff;
+            font-size:1.6rem;
+            font-weight:700;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+        }
 
         header nav a {
             color:#fff;
@@ -62,6 +70,75 @@ if (!in_array($abaAtiva, ['dados', 'privacidade'], true)) {
         }
 
         header nav a:hover { opacity:.8; }
+
+        /* ===== Menu hambúrguer (mobile) ===== */
+        .menu-toggle,
+        .menu-mobile { display:none; }
+
+        .menu-toggle {
+            width:42px; height:42px;
+            padding:0; border:none; border-radius:10px;
+            background:rgba(255,255,255,.14);
+            cursor:pointer;
+            flex-direction:column;
+            justify-content:center; align-items:center;
+            gap:5px;
+            -webkit-tap-highlight-color:transparent;
+            transition:background .25s ease;
+        }
+        .menu-toggle:active { background:rgba(255,255,255,.28); }
+
+        .menu-toggle span {
+            display:block; width:22px; height:3px;
+            border-radius:3px; background:#fff;
+            transition:transform .3s ease, opacity .2s ease;
+        }
+        .menu-toggle.aberto span:nth-child(1) { transform:translateY(8px) rotate(45deg); }
+        .menu-toggle.aberto span:nth-child(2) { opacity:0; }
+        .menu-toggle.aberto span:nth-child(3) { transform:translateY(-8px) rotate(-45deg); }
+
+        .menu-mobile {
+            flex-direction:column;
+            align-items:center;
+            text-align:center;
+            gap:4px;
+            background:#3539b8;
+            opacity:0; visibility:hidden; transform:translateY(-8px);
+            transition:opacity .2s ease, transform .2s ease, visibility .2s ease;
+        }
+        .menu-mobile.aberto { opacity:1; visibility:visible; transform:translateY(0); }
+
+        .menu-mobile a {
+            display:flex; justify-content:center; align-items:center;
+            width:100%; min-height:46px;
+            padding:12px 16px;
+            border-radius:12px;
+            color:#fff; text-decoration:none;
+            font-size:1rem; font-weight:600;
+            text-align:center;
+            transition:background .2s ease;
+        }
+        .menu-mobile a:hover,
+        .menu-mobile a:active { background:rgba(255,255,255,.14); }
+
+        @media (max-width:640px) {
+            header nav { display:none; }
+
+            .menu-toggle {
+                display:flex;
+                position:fixed; top:14px; right:16px; z-index:100;
+            }
+
+            .menu-mobile {
+                display:flex;
+                position:fixed; top:70px; left:12px; right:12px; z-index:99;
+                padding:10px;
+                border-radius:16px;
+                box-shadow:0 14px 30px rgba(0,0,0,.28);
+            }
+
+            header .logo { font-size:1.3rem; max-width:60%; }
+        }
 
         main { max-width:700px; margin:40px auto; padding:0 20px; }
 
@@ -165,7 +242,20 @@ if (!in_array($abaAtiva, ['dados', 'privacidade'], true)) {
             <a href="contato/conversa.php">Contato</a>
             <a href="painel_api.php">IA</a>
         </nav>
+
+        <!-- menu hambúrguer (mobile) -->
+        <button type="button" class="menu-toggle" id="menuToggle" aria-label="Abrir menu" aria-controls="menuMobile" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
     </header>
+
+    <nav class="menu-mobile" id="menuMobile" aria-label="Menu principal">
+        <a href="home.php">Home</a>
+        <a href="contato/conversa.php">Contato</a>
+        <a href="painel_api.php">IA</a>
+    </nav>
 
     <main>
         <h1>Meu perfil</h1>
@@ -240,6 +330,44 @@ if (!in_array($abaAtiva, ['dados', 'privacidade'], true)) {
             </div>
         </div>
     </main>
+
+    <script>
+        /* ===== Menu hambúrguer (mobile) ===== */
+        (() => {
+            const btn  = document.getElementById('menuToggle');
+            const menu = document.getElementById('menuMobile');
+            if (!btn || !menu) return;
+
+            const fechar = () => {
+                btn.classList.remove('aberto');
+                menu.classList.remove('aberto');
+                btn.setAttribute('aria-expanded', 'false');
+            };
+
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const aberto = menu.classList.toggle('aberto');
+                btn.classList.toggle('aberto', aberto);
+                btn.setAttribute('aria-expanded', String(aberto));
+            });
+
+            menu.addEventListener('click', (e) => {
+                if (e.target.closest('a')) fechar();
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!menu.contains(e.target) && !btn.contains(e.target)) fechar();
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') fechar();
+            });
+
+            window.addEventListener('resize', () => {
+                if (window.innerWidth > 640) fechar();
+            });
+        })();
+    </script>
 
     <script>
         function mostrarAba(nome) {

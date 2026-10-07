@@ -27,10 +27,12 @@ require __DIR__ . '/../config/config.php';
         header("Location:../public/home.php");
         exit;
     } elseif($senha && $email == !NULL) {
-        echo "<div style='color:#776472;'>Nome, email ou senha incorretos.</div>";
+        // Em vez de ecoar HTML cru (sem estilo, fora do <body>), devolve a
+        // mensagem pra tela de login mostrar dentro do próprio layout.
+        return 'Nome, email ou senha incorretos.';
     }
 
-
+    return null;
 }
 
 function cadastrar( $nome, $email, $senha){
@@ -48,9 +50,9 @@ function cadastrar( $nome, $email, $senha){
             $stmt-> execute();
 
             if($stmt->fetchcolumn() >0){
-                echo "email ja cadastrado";
-                header("location:../public/cadastrar.php");
-                
+                // Devolve a mensagem pra tela de cadastro mostrar com CSS,
+                // em vez de ecoar texto cru antes do <!DOCTYPE>.
+                return 'E-mail já cadastrado.';
             }else{
                
         $sql = "INSERT INTO usuarios (nome,email,senha) VALUES (:nome,:email,:senha)";
@@ -60,7 +62,8 @@ function cadastrar( $nome, $email, $senha){
         $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
         $stmt->bindParam(':senha', $senhaHash);
         $stmt ->execute();
-        header("location:../public/login.php");
+        // ?cadastrado=1 faz o login.php mostrar o aviso "Você foi cadastrado"
+        header("location:../public/login.php?cadastrado=1");
         exit();
 
     

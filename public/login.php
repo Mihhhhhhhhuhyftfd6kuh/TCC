@@ -5,14 +5,17 @@ require __DIR__ . '/../config/config.php';
 require __DIR__ . '/../controllers/auth.php';
 
 
-if($_SERVER['REQUEST_METHOD']){
+$erroLogin = null;
+
+if($_SERVER['REQUEST_METHOD'] === 'POST'){
     $email =  $_POST['email'] ?? null;
     $senha = $_POST['senha']  ?? null;
 
-login( $email,$senha);
-
-
+    $erroLogin = login( $email,$senha);
 }
+
+// Vem do cadastrar.php depois de criar a conta com sucesso
+$cadastroOk = isset($_GET['cadastrado']) && $_GET['cadastrado'] === '1';
 
 ?>
 <!DOCTYPE html>
@@ -22,6 +25,8 @@ login( $email,$senha);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
    <title>Cadastro - Crypher.IA</title>
+    <link rel="icon" type="image/x-icon" href="../assets/img/mascote_s_fundo.png">
+
 
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
@@ -342,6 +347,39 @@ body {
 
     margin-left: 0;
     margin-top: 5px;
+}
+
+
+/* =========================================
+   AVISOS (erro de login / cadastro concluído)
+========================================= */
+
+.aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+
+    width: 100%;
+
+    padding: 12px 16px;
+    margin-bottom: 18px;
+
+    border-radius: 10px;
+
+    font-size: .9rem;
+    line-height: 1.4;
+}
+
+.aviso-erro {
+    background: rgba(220, 53, 69, .12);
+    color: #ffd7da;
+    border: 1px solid rgba(220, 53, 69, .55);
+}
+
+.aviso-sucesso {
+    background: rgba(40, 167, 69, .15);
+    color: #d7f5df;
+    border: 1px solid rgba(40, 167, 69, .55);
 }
 
 
@@ -1003,6 +1041,14 @@ a {
 
 
         <div class="form-card">
+
+            <?php if ($cadastroOk): ?>
+                <div class="aviso aviso-sucesso">Você foi cadastrado! Faça login para continuar.</div>
+            <?php endif; ?>
+
+            <?php if ($erroLogin): ?>
+                <div class="aviso aviso-erro"><?= htmlspecialchars($erroLogin) ?></div>
+            <?php endif; ?>
 
             <form method="post">
 
