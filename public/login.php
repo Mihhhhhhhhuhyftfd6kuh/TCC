@@ -1037,7 +1037,9 @@ a {
     <section class="right-panel">
 
 
-        <h1>Entre na sua conta</h1>
+        <h1>Faça login</h1>
+
+        <p>Entre na sua conta</p>
 
 
         <div class="form-card">
@@ -1061,7 +1063,7 @@ a {
                 <input type="password" name="senha">
 
                 <button type="submit" class="btn-cadastrar" >
-                    logar
+                    Login
                 </button>
 
             </form>

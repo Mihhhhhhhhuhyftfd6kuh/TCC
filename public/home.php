@@ -1237,7 +1237,7 @@ a { text-decoration:none; color:inherit; }
         <span>Nossa missão</span>
 
         <h2>
-            Soluções pioneiras de cibersegurança orientadas por IA
+            Soluções modernas de cibersegurança orientadas por IA
         </h2>
 
     </div>
@@ -1295,20 +1295,16 @@ a { text-decoration:none; color:inherit; }
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-
-    /* =========================
-       CHUVINHA
-    ========================= */
-
     const canvas = document.getElementById("rainCanvas");
+     const ctx = canvas.getContext("2d");
 
     if (canvas) {
 
         const ctx = canvas.getContext("2d");
 
         function resizeCanvas() {
-            canvas.width = canvas.clientWidth;
-            canvas.height = canvas.clientHeight;
+             canvas.width = canvas.offsetWidth;
+             canvas.height = canvas.offsetHeight;
         }
 
         resizeCanvas();
