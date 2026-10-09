@@ -14,8 +14,12 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
     $erroLogin = login( $email,$senha);
 }
 
-// Vem do cadastrar.php depois de criar a conta com sucesso
-$cadastroOk = isset($_GET['cadastrado']) && $_GET['cadastrado'] === '1';
+// Vem do cadastrar.php depois de criar a conta com sucesso.
+// Se o login for tentado e der erro, essa mensagem some de vez
+// (o parâmetro ?cadastrado=1 continua na URL porque o form reenvia
+// pra ela mesma, então sem essa checagem ela voltaria a aparecer
+// em toda tentativa errada).
+$cadastroOk = isset($_GET['cadastrado']) && $_GET['cadastrado'] === '1' && !$erroLogin;
 
 ?>
 <!DOCTYPE html>
@@ -368,6 +372,11 @@ body {
 
     font-size: .9rem;
     line-height: 1.4;
+
+    transition: opacity .5s ease, margin .5s ease, padding .5s ease, max-height .5s ease;
+    opacity: 1;
+    max-height: 200px;
+    overflow: hidden;
 }
 
 .aviso-erro {
@@ -1038,6 +1047,21 @@ window.addEventListener(
     "resize",
     resizeCanvas
 );
+
+// Faz as mensagens de aviso (erro/sucesso) do login somem sozinhas após 7s
+document.querySelectorAll('.aviso').forEach(function (aviso) {
+    setTimeout(function () {
+        aviso.style.opacity = '0';
+        aviso.style.maxHeight = '0';
+        aviso.style.marginBottom = '0';
+        aviso.style.paddingTop = '0';
+        aviso.style.paddingBottom = '0';
+
+        aviso.addEventListener('transitionend', function () {
+            aviso.remove();
+        }, { once: true });
+    }, 7000);
+});
 
 </script>
 </body>
