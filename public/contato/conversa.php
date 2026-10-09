@@ -1980,10 +1980,13 @@ main {
                 body: corpo
             });
 
-            const dados = await resp.json();
+            // Se o servidor devolver algo que não é JSON (erro do PHP, por exemplo),
+            // mostra uma mensagem clara em vez de "Unexpected token <"
+            let dados = null;
+            try { dados = await resp.json(); } catch (_) { /* resposta não-JSON */ }
 
-            if (!dados.sucesso) {
-                throw new Error(dados.erro || 'Não foi possível enviar a mensagem');
+            if (!resp.ok || !dados || !dados.sucesso) {
+                throw new Error((dados && dados.erro) || `Erro do servidor (${resp.status})`);
             }
         }
 

@@ -15,6 +15,9 @@ RUN apt-get update && apt-get install -y \
 # Instala o Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# O PHP vem limitado a 2MB por upload; o chat de contato aceita até 5MB
+RUN printf "upload_max_filesize=6M\npost_max_size=8M\n" > /usr/local/etc/php/conf.d/uploads.ini
+
 WORKDIR /var/www/html
 COPY . .
 
