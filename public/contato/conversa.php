@@ -38,6 +38,21 @@
     // Inicial exibida na bolinha do perfil
     $inicialUsuario = mb_strtoupper(mb_substr($nomeAtual, 0, 1));
 
+    // Ícone (Font Awesome) do anexo conforme a extensão do arquivo
+    // (mesma ideia do painel_api.php, mas aqui o contato aceita qualquer tipo de arquivo)
+    function iconeAnexo(string $nome): string {
+        $ext = strtolower(pathinfo($nome, PATHINFO_EXTENSION));
+        if ($ext === 'pdf') return 'fa-file-pdf';
+        if (in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'], true)) return 'fa-file-image';
+        if (in_array($ext, ['doc', 'docx', 'odt', 'rtf'], true)) return 'fa-file-word';
+        if (in_array($ext, ['xls', 'xlsx', 'csv', 'ods'], true)) return 'fa-file-excel';
+        if (in_array($ext, ['zip', 'rar', '7z', 'tar', 'gz'], true)) return 'fa-file-zipper';
+        if ($ext === 'sql') return 'fa-database';
+        if ($ext === 'txt' || $ext === 'log' || $ext === 'md') return 'fa-file-lines';
+        if (in_array($ext, ['php', 'js', 'py', 'html', 'css', 'json', 'xml', 'java', 'c', 'cpp', 'ts'], true)) return 'fa-file-code';
+        return 'fa-file';
+    }
+
     // Buscar histórico de mensagens do banco ao carregar a página
     $conversa = imprimir_m($id_usuario);
 
@@ -859,33 +874,107 @@ main {
     overflow-wrap: anywhere;
 }
 
-.message a {
+/* =========================================
+   ANEXOS (mesmo visual do painel_api.php)
+   - .anexo-chip dentro da mensagem enviada/recebida (link p/ abrir)
+   - .anexo-pendente: arquivo escolhido, antes de enviar
+========================================= */
+
+.anexo-chip {
     display: inline-flex;
     align-items: center;
+    gap: 9px;
 
     max-width: 100%;
 
-    margin-top: 5px;
+    padding: 8px 12px;
 
-    padding: 7px 12px;
+    border-radius: 11px;
 
-    background: var(--azul-claro);
-
-    border-radius: 10px;
+    background: #f1f1fa;
+    border: 1px solid #e0e0f2;
 
     color: var(--azul);
 
-    font-size: .76rem;
+    font-size: .78rem;
     font-weight: 600;
+    line-height: 1.2;
 
-    overflow-wrap: anywhere;
-
-    transition: .25s ease;
+    transition: background .2s ease, border-color .2s ease, color .2s ease;
 }
 
-.message a:hover {
+.anexo-chip i {
+    flex-shrink: 0;
+    font-size: 1.05rem;
+}
+
+.anexo-chip .anexo-nome {
+    min-width: 0;
+
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.anexo-chip .anexo-tamanho {
+    flex-shrink: 0;
+
+    font-size: .68rem;
+    font-weight: 500;
+
+    opacity: .75;
+}
+
+/* chip dentro da mensagem: é um link clicável */
+.message a.anexo-chip {
+    margin-top: 6px;
+}
+
+.message a.anexo-chip:hover {
     background: var(--amarelo);
+    border-color: var(--amarelo);
     color: #222;
+}
+
+/* chip do arquivo escolhido, acima da caixa de envio */
+.anexo-pendente {
+    padding: 0 2px 8px;
+}
+
+.anexo-pendente[hidden] {
+    display: none;
+}
+
+.anexo-remover {
+    flex-shrink: 0;
+
+    width: 22px;
+    height: 22px;
+
+    padding: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+    border-radius: 50%;
+
+    background: rgba(67, 72, 217, .12);
+    color: var(--azul);
+
+    cursor: pointer;
+
+    transition: background .2s ease, color .2s ease;
+}
+
+.anexo-remover:hover {
+    background: var(--azul);
+    color: #fff;
+}
+
+.anexo-remover i {
+    font-size: .7rem;
 }
 
 @keyframes aparecerMensagem {
@@ -1621,9 +1710,12 @@ main {
                                         <strong><?= htmlspecialchars($msg['nome']) ?></strong>
                                         <small><?= htmlspecialchars($msg['created_at']) ?></small>
                                     </div>
-                                    <p><?= htmlspecialchars($msg['mensagem']) ?></p>
+                                    <?php if (trim((string) $msg['mensagem']) !== ''): ?>
+                                        <p><?= htmlspecialchars($msg['mensagem']) ?></p>
+                                    <?php endif; ?>
                                     <?php if (!empty($msg['arquivo_url'])): ?>
-                                        <a href="<?= htmlspecialchars($msg['arquivo_url']) ?>" target="_blank">📎 <?= htmlspecialchars($msg['arquivo_nome']) ?></a>
+                                        <?php $arqNome = $msg['arquivo_nome'] ?: 'arquivo'; ?>
+                                        <a class="anexo-chip" href="<?= htmlspecialchars($msg['arquivo_url']) ?>" target="_blank" rel="noopener noreferrer" title="Abrir <?= htmlspecialchars($arqNome) ?>"><i class="fa-solid <?= iconeAnexo($arqNome) ?>"></i><span class="anexo-nome"><?= htmlspecialchars($arqNome) ?></span></a>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -1641,6 +1733,15 @@ main {
                         <div class="alerta erro"><?= htmlspecialchars($flash_error) ?></div>
                     <?php endif; ?>
 
+                    <div class="anexo-pendente" id="anexo-pendente" hidden>
+                        <div class="anexo-chip">
+                            <i class="fa-solid fa-file" id="anexo-pendente-icone"></i>
+                            <span class="anexo-nome" id="anexo-pendente-nome"></span>
+                            <span class="anexo-tamanho" id="anexo-pendente-tamanho"></span>
+                            <button type="button" class="anexo-remover" id="anexo-remover" title="Remover arquivo" aria-label="Remover arquivo"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                    </div>
+
                     <form id="form-mensagem" enctype="multipart/form-data">
                         <textarea name="mensagem" id="mensagem" placeholder="Escreva sua mensagem..." rows="2"></textarea>
 
@@ -1649,8 +1750,6 @@ main {
                                 <i class="fa-solid fa-paperclip"></i> <span>Anexar</span>
                                 <input type="file" name="arquivo" id="arquivo-mensagem">
                             </label>
-
-                            <span class="nome-arquivo" id="nome-arquivo"></span>
 
                             <span class="dica-envio">Enter envia · Shift + Enter quebra linha</span>
 
@@ -1673,7 +1772,11 @@ main {
         const inputArquivo   = document.getElementById('arquivo-mensagem');
         const statusEl       = document.getElementById('chat-status');
         const btnAnexo       = document.getElementById('btn-anexo');
-        const nomeArquivoEl  = document.getElementById('nome-arquivo');
+        const anexoPendente         = document.getElementById('anexo-pendente');
+        const anexoPendenteIcone    = document.getElementById('anexo-pendente-icone');
+        const anexoPendenteNome     = document.getElementById('anexo-pendente-nome');
+        const anexoPendenteTamanho  = document.getElementById('anexo-pendente-tamanho');
+        const btnRemoverAnexo       = document.getElementById('anexo-remover');
         const contaBotao     = document.getElementById('conta-botao');
         const contaDropdown  = document.getElementById('conta-dropdown');
 
@@ -1748,12 +1851,48 @@ main {
         }
         textarea.addEventListener('input', ajustarTextarea);
 
-        // Mostra o nome do arquivo escolhido e destaca o botão
-        inputArquivo.addEventListener('change', () => {
+        // Ícone (Font Awesome) conforme a extensão — igual ao iconeAnexo() do PHP
+        function iconeDoArquivo(nome) {
+            const ext = String(nome ?? '').split('.').pop().toLowerCase();
+            if (ext === 'pdf') return 'fa-file-pdf';
+            if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'].includes(ext)) return 'fa-file-image';
+            if (['doc', 'docx', 'odt', 'rtf'].includes(ext)) return 'fa-file-word';
+            if (['xls', 'xlsx', 'csv', 'ods'].includes(ext)) return 'fa-file-excel';
+            if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'fa-file-zipper';
+            if (ext === 'sql') return 'fa-database';
+            if (['txt', 'log', 'md'].includes(ext)) return 'fa-file-lines';
+            if (['php', 'js', 'py', 'html', 'css', 'json', 'xml', 'java', 'c', 'cpp', 'ts'].includes(ext)) return 'fa-file-code';
+            return 'fa-file';
+        }
+
+        function formatarTamanho(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1).replace('.', ',') + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1).replace('.', ',') + ' MB';
+        }
+
+        // Mostra o arquivo escolhido como um chip acima da caixa de envio
+        function atualizarAnexoPendente() {
             const arquivo = inputArquivo.files[0];
-            nomeArquivoEl.textContent = arquivo ? arquivo.name : '';
-            btnAnexo.classList.toggle('tem-arquivo', !!arquivo);
-        });
+            if (arquivo) {
+                anexoPendenteIcone.className = 'fa-solid ' + iconeDoArquivo(arquivo.name);
+                anexoPendenteNome.textContent = arquivo.name;
+                anexoPendenteTamanho.textContent = formatarTamanho(arquivo.size);
+                anexoPendente.hidden = false;
+                btnAnexo.classList.add('tem-arquivo');
+            } else {
+                anexoPendente.hidden = true;
+                btnAnexo.classList.remove('tem-arquivo');
+            }
+        }
+
+        function limparAnexo() {
+            inputArquivo.value = '';
+            atualizarAnexoPendente();
+        }
+
+        inputArquivo.addEventListener('change', atualizarAnexoPendente);
+        btnRemoverAnexo.addEventListener('click', limparAnexo);
 
         // Enter envia no computador; no celular o Enter quebra a linha
         // (o envio é pelo botão). Shift+Enter sempre quebra linha.
@@ -1789,8 +1928,12 @@ main {
                             <strong>${escaparHtml(m.nome)}</strong>
                             <small>${escaparHtml(m.created_at)}</small>
                         </div>
-                        <p>${escaparHtml(m.mensagem)}</p>
-                        ${m.arquivo_url ? `<a href="${escaparHtml(m.arquivo_url)}" target="_blank">📎 ${escaparHtml(m.arquivo_nome)}</a>` : ''}
+                        ${m.mensagem ? `<p>${escaparHtml(m.mensagem)}</p>` : ''}
+                        ${m.arquivo_url ? `
+                            <a class="anexo-chip" href="${escaparHtml(m.arquivo_url)}" target="_blank" rel="noopener noreferrer" title="Abrir ${escaparHtml(m.arquivo_nome || 'arquivo')}">
+                                <i class="fa-solid ${iconeDoArquivo(m.arquivo_nome)}"></i>
+                                <span class="anexo-nome">${escaparHtml(m.arquivo_nome || 'arquivo')}</span>
+                            </a>` : ''}
                     </div>
                 </div>
             `).join('');
@@ -1855,9 +1998,7 @@ main {
                 await enviarMensagem(texto, arquivo);
                 textarea.value = '';
                 ajustarTextarea();
-                inputArquivo.value = '';
-                nomeArquivoEl.textContent = '';
-                btnAnexo.classList.remove('tem-arquivo');
+                limparAnexo();
                 await buscarMensagens();
                 irParaFinal();
             } catch (erro) {
