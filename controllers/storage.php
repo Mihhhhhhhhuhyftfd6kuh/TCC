@@ -10,6 +10,13 @@ function envStorage(string $nome): ?string {
     return ($valor === false || $valor === null || $valor === '') ? null : (string) $valor;
 }
 
+/** true se as 3 chaves do Cloudinary estão disponíveis neste ambiente */
+function storageConfigurado(): bool {
+    return envStorage('CLOUDINARY_CLOUD_NAME') !== null
+        && envStorage('CLOUDINARY_API_KEY') !== null
+        && envStorage('CLOUDINARY_API_SECRET') !== null;
+}
+
 function uploadArquivo(string $tmpPath, string $nomeOriginal): ?string {
     $cloudName = envStorage('CLOUDINARY_CLOUD_NAME');
     $apiKey    = envStorage('CLOUDINARY_API_KEY');
