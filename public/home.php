@@ -46,7 +46,7 @@ body { background: #4348D9; }
 body{ background:#4348D9; min-height:100vh; }
 
 /*chuvinha*/
-#rainCanvas { position:absolute; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none; }
+#rainCanvas { position:absolute; top:0; left:0; width:100%; height:100%; z-index:-1; pointer-events:none; }
 
 header{
     position:absolute; top:0; left:0; width:100%;
@@ -400,7 +400,7 @@ html{
 html::-webkit-scrollbar{ display:none; }
 
 /* O canvas fica preso à viewport */
-#rainCanvas { position:absolute; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none; }
+#rainCanvas { position:absolute; top:0; left:0; width:100%; height:100%; z-index:-1; pointer-events:none; }
 
 /* Imagem principal do Hero */
 .hero-image { max-width:100%; }
