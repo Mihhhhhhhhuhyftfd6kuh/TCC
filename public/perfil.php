@@ -104,10 +104,11 @@ body {
 
 header {
     width: 100%;
-    height: 78px;
+    height: 96px;
+    min-height: 96px;
     flex-shrink: 0;
 
-    padding: 0 55px;
+    padding: 0 80px;
 
     background: var(--azul);
 
@@ -124,7 +125,7 @@ header {
 .logo {
     color: #fff;
 
-    font-size: 2rem;
+    font-size: 2.5rem;
     font-weight: 700;
 
     letter-spacing: -.5px;
@@ -267,6 +268,110 @@ header nav a:hover {
 }
 
 .conta-dropdown a:hover {
+    background: #f2f2f2;
+}
+
+
+/* =========================================
+   BLOCO DIREITO (hambúrguer + bolinha da conta)
+   Mesmo padrão da Home. O hambúrguer só aparece no celular.
+========================================= */
+
+.header-direita {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    margin-left: auto;
+}
+
+.menu-hamb {
+    display: none;
+
+    flex-shrink: 0;
+}
+
+.hamb-botao {
+    width: 40px;
+    height: 40px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(255, 255, 255, .18);
+    color: #fff;
+
+    border: none;
+    border-radius: 12px;
+
+    font-size: 1.05rem;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition: background .2s ease;
+}
+
+.hamb-botao[aria-expanded="true"] {
+    background: rgba(255, 255, 255, .32);
+}
+
+.hamb-dropdown {
+    display: none;
+
+    position: absolute;
+
+    top: calc(100% + 8px);
+    right: 0;
+
+    min-width: 180px;
+
+    background: #fff;
+
+    border-radius: 12px;
+
+    overflow: hidden;
+
+    box-shadow: 0 15px 35px rgba(0, 0, 0, .22);
+
+    z-index: 200;
+}
+
+.hamb-dropdown.ativo {
+    display: block;
+}
+
+.hamb-dropdown a {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 13px 20px;
+
+    color: #222;
+
+    font-size: .9rem;
+    font-weight: 500;
+
+    text-decoration: none;
+
+    transition: .2s ease;
+}
+
+.hamb-dropdown a i {
+    width: 16px;
+
+    text-align: center;
+
+    color: var(--azul);
+}
+
+.hamb-dropdown a:hover {
     background: #f2f2f2;
 }
 
@@ -553,6 +658,10 @@ button {
     header {
         padding: 0 30px;
     }
+
+    .logo {
+        font-size: 2.2rem;
+    }
 }
 
 
@@ -565,26 +674,38 @@ button {
     /* ---- header compacto: logo + bolinha da conta ---- */
 
     header {
-        height: calc(58px + env(safe-area-inset-top));
+        height: calc(84px + env(safe-area-inset-top));
+        min-height: calc(84px + env(safe-area-inset-top));
 
-        padding: env(safe-area-inset-top) 18px 0;
+        padding: env(safe-area-inset-top) 20px 0;
 
-        box-shadow: none;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, .12);
     }
 
     .logo {
-        font-size: 1.4rem;
+        font-size: 1.9rem;
+    }
+
+    .hamb-botao {
+        width: 46px;
+        height: 46px;
+
+        font-size: 1.15rem;
     }
 
     header nav {
         display: none;
     }
 
-    .conta-botao {
-        width: 40px;
-        height: 40px;
+    .menu-hamb {
+        display: block;
+    }
 
-        font-size: 1rem;
+    .conta-botao {
+        width: 46px;
+        height: 46px;
+
+        font-size: 1.15rem;
     }
 
     .conta-botao:hover {
@@ -715,15 +836,31 @@ button {
             <a href="<?= $linkContato ?>">Contato</a>
         </nav>
 
-        <!-- Bolinha da conta (mesmo estilo da Home e da IA) -->
-        <div class="conta-menu">
-            <button type="button" class="conta-botao" id="conta-botao" title="Minha conta" aria-haspopup="true" aria-expanded="false">
-                <?= htmlspecialchars($inicialUsuario) ?>
-            </button>
+        <div class="header-direita">
 
-            <div class="conta-dropdown" id="conta-dropdown">
-                <a href="perfil.php"><i class="fa-regular fa-user"></i> Meu perfil</a>
-                <a href="logout.php"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sair</a>
+            <!-- Menu hambúrguer (só no celular, igual ao da Home) -->
+            <div class="menu-hamb">
+                <button type="button" class="hamb-botao" id="hamb-botao" title="Menu" aria-label="Menu" aria-haspopup="true" aria-expanded="false">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+
+                <div class="hamb-dropdown" id="hamb-dropdown">
+                    <a href="home.php"><i class="fa-solid fa-house"></i> Home</a>
+                    <a href="painel_api.php"><i class="fa-solid fa-robot"></i> IA</a>
+                    <a href="<?= $linkContato ?>"><i class="fa-regular fa-comments"></i> Contato</a>
+                </div>
+            </div>
+
+            <!-- Bolinha da conta (mesmo estilo da Home e da IA) -->
+            <div class="conta-menu">
+                <button type="button" class="conta-botao" id="conta-botao" title="Minha conta" aria-haspopup="true" aria-expanded="false">
+                    <?= htmlspecialchars($inicialUsuario) ?>
+                </button>
+
+                <div class="conta-dropdown" id="conta-dropdown">
+                    <a href="perfil.php"><i class="fa-regular fa-user"></i> Meu perfil</a>
+                    <a href="logout.php"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sair</a>
+                </div>
             </div>
         </div>
     </header>
@@ -848,6 +985,50 @@ button {
 
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') fechar();
+            });
+        })();
+
+        /* ===== Menu hambúrguer (celular): o ícone vira X quando está aberto ===== */
+        (() => {
+            const botao = document.getElementById('hamb-botao');
+            const menu  = document.getElementById('hamb-dropdown');
+            if (!botao || !menu) return;
+
+            const icone = botao.querySelector('i');
+            const conta = document.getElementById('conta-dropdown');
+            const contaBotao = document.getElementById('conta-botao');
+
+            const fechar = () => {
+                menu.classList.remove('ativo');
+                botao.setAttribute('aria-expanded', 'false');
+                icone.className = 'fa-solid fa-bars';
+            };
+
+            botao.addEventListener('click', (e) => {
+                e.stopPropagation();
+
+                // fecha o menu da bolinha se estiver aberto
+                if (conta) conta.classList.remove('ativo');
+                if (contaBotao) contaBotao.setAttribute('aria-expanded', 'false');
+
+                const aberto = menu.classList.toggle('ativo');
+                botao.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+                icone.className = aberto ? 'fa-solid fa-xmark' : 'fa-solid fa-bars';
+            });
+
+            // abrir o menu da bolinha fecha o hambúrguer
+            if (contaBotao) contaBotao.addEventListener('click', fechar);
+
+            document.addEventListener('click', (e) => {
+                if (!menu.contains(e.target)) fechar();
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') fechar();
+            });
+
+            window.addEventListener('resize', () => {
+                if (window.innerWidth > 768) fechar();
             });
         })();
 

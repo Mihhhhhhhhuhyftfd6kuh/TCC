@@ -1391,11 +1391,110 @@ main {
     .dica-envio {
         display: none;
     }
+}
 
-    /* ---- sem barra inferior: Home e IA ficam no menu da bolinha ---- */
+/* =========================================================
+   MENU HAMBÚRGUER (só no celular)
+   Botão ao lado da bolinha da conta; abre uma lista branca
+   igual ao menu do perfil. O ícone vira X quando está aberto.
+========================================================= */
 
-    .conta-dropdown .so-mobile {
-        display: flex;
+.header-direita {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+}
+
+.menu-hamb {
+    display: none;
+    flex-shrink: 0;
+}
+
+.hamb-botao {
+    width: 40px;
+    height: 40px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(255, 255, 255, .18);
+    color: #fff;
+
+    border: none;
+    border-radius: 12px;
+
+    font-size: 1.05rem;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition: background .2s ease;
+}
+
+.hamb-botao[aria-expanded="true"] {
+    background: rgba(255, 255, 255, .32);
+}
+
+.hamb-dropdown {
+    display: none;
+
+    position: absolute;
+
+    top: calc(100% + 8px);
+    right: 0;
+
+    min-width: 180px;
+
+    background: #fff;
+
+    border-radius: 12px;
+
+    overflow: hidden;
+
+    box-shadow: 0 15px 35px rgba(0, 0, 0, .22);
+
+    z-index: 200;
+}
+
+.hamb-dropdown.ativo {
+    display: block;
+}
+
+.hamb-dropdown a {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 13px 20px;
+
+    color: #222;
+
+    font-size: .9rem;
+    font-weight: 500;
+
+    text-decoration: none;
+
+    transition: .2s ease;
+}
+
+.hamb-dropdown a i {
+    width: 16px;
+
+    text-align: center;
+
+    color: #4348D9;
+}
+
+.hamb-dropdown a:hover {
+    background: #f2f2f2;
+}
+
+@media (max-width: 768px) {
+    .menu-hamb {
+        display: block;
     }
 }
     </style>
@@ -1409,16 +1508,27 @@ main {
             <a href="../painel_api.php">IA</a>
         </nav>
 
-        <div class="conta-menu">
-            <button type="button" class="conta-botao" id="conta-botao" title="Minha conta" aria-haspopup="true" aria-expanded="false">
-                <?= htmlspecialchars($inicialUsuario) ?>
-            </button>
+        <div class="header-direita">
+            <div class="menu-hamb">
+                <button type="button" class="hamb-botao" id="hamb-botao" title="Menu" aria-label="Menu" aria-haspopup="true" aria-expanded="false">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
 
-            <div class="conta-dropdown" id="conta-dropdown">
-                <a href="../home.php" class="so-mobile"><i class="fa-solid fa-house"></i> Home</a>
-                <a href="../painel_api.php" class="so-mobile"><i class="fa-solid fa-robot"></i> IA</a>
-                <a href="../perfil.php"><i class="fa-regular fa-user"></i> Meu perfil</a>
-                <a href="../logout.php"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sair</a>
+                <div class="hamb-dropdown" id="hamb-dropdown">
+                <a href="../home.php"><i class="fa-solid fa-house"></i> Home</a>
+                <a href="../painel_api.php"><i class="fa-solid fa-robot"></i> IA</a>
+                </div>
+            </div>
+
+            <div class="conta-menu">
+                <button type="button" class="conta-botao" id="conta-botao" title="Minha conta" aria-haspopup="true" aria-expanded="false">
+                    <?= htmlspecialchars($inicialUsuario) ?>
+                </button>
+
+                <div class="conta-dropdown" id="conta-dropdown">
+                    <a href="../perfil.php"><i class="fa-regular fa-user"></i> Meu perfil</a>
+                    <a href="../logout.php"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sair</a>
+                </div>
             </div>
         </div>
     </header>
@@ -1761,5 +1871,48 @@ main {
         setInterval(buscarMensagens, INTERVALO_ATUALIZACAO);
     })();
     </script>
+<script>
+/* ===== Menu hambúrguer (celular) ===== */
+(() => {
+    const botao = document.getElementById('hamb-botao');
+    const menu = document.getElementById('hamb-dropdown');
+    if (!botao || !menu) return;
+
+    const icone = botao.querySelector('i');
+
+    const fechar = () => {
+        menu.classList.remove('ativo');
+        botao.setAttribute('aria-expanded', 'false');
+        icone.className = 'fa-solid fa-bars';
+    };
+
+    botao.addEventListener('click', (e) => {
+        e.stopPropagation();
+
+        // fecha o menu da bolinha se estiver aberto
+        document.querySelectorAll('.conta-dropdown.ativo').forEach(d => d.classList.remove('ativo'));
+        document.querySelectorAll('.conta-botao').forEach(b => b.setAttribute('aria-expanded', 'false'));
+
+        const aberto = menu.classList.toggle('ativo');
+        botao.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+        icone.className = aberto ? 'fa-solid fa-xmark' : 'fa-solid fa-bars';
+    });
+
+    // abrir o menu da bolinha fecha o hambúrguer
+    document.querySelectorAll('.conta-botao').forEach(b => b.addEventListener('click', fechar));
+
+    document.addEventListener('click', (e) => {
+        if (!menu.contains(e.target)) fechar();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') fechar();
+    });
+
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) fechar();
+    });
+})();
+</script>
 </body>
 </html>

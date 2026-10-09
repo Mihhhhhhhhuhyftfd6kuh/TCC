@@ -34,6 +34,8 @@ $cadastroOk = isset($_GET['cadastrado']) && $_GET['cadastrado'] === '1' && !$err
 
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
 
@@ -329,14 +331,20 @@ body {
 
     font-size: 1rem;
 
-    background: #fff;
+    background: #E4E5F0;   /* cinza levemente azulado, combina com o azul do site */
+    color: #202020;
 
     transition:
         box-shadow .2s ease,
         transform .2s ease;
 }
 
+.form-card input::placeholder {
+    color: #8b8ca3;
+}
+
 .form-card input:focus {
+    background: #ECEDF6;
     box-shadow:
         0 0 0 3px rgba(243, 190, 39, .55);
 }
@@ -872,6 +880,120 @@ a {
         padding: 22px 16px;
     }
 }
+/* =========================================================
+   MENU HAMBÚRGUER (só no celular) — mesmo padrão da Home
+   Fica ao lado do botão amarelo, na barra azul do topo.
+   O ícone vira X quando o menu está aberto.
+========================================================= */
+
+.header-direita {
+    display: none;
+}
+
+.menu-hamb {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.hamb-botao {
+    width: 40px;
+    height: 40px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(255, 255, 255, .18);
+    color: #fff;
+
+    border: none;
+    border-radius: 12px;
+
+    font-size: 1.05rem;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition: background .2s ease;
+}
+
+.hamb-botao[aria-expanded="true"] {
+    background: rgba(255, 255, 255, .32);
+}
+
+.hamb-dropdown {
+    display: none;
+
+    position: absolute;
+
+    top: calc(100% + 8px);
+    right: 0;
+
+    min-width: 180px;
+
+    background: #fff;
+
+    border-radius: 12px;
+
+    overflow: hidden;
+
+    box-shadow: 0 15px 35px rgba(0, 0, 0, .22);
+
+    z-index: 200;
+}
+
+.hamb-dropdown.ativo {
+    display: block;
+}
+
+.hamb-dropdown a {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 13px 20px;
+
+    color: #222;
+
+    font-size: .9rem;
+    font-weight: 500;
+
+    text-decoration: none;
+
+    transition: .2s ease;
+}
+
+.hamb-dropdown a i {
+    width: 16px;
+
+    text-align: center;
+
+    color: #4348D9;
+}
+
+.hamb-dropdown a:hover {
+    background: #f2f2f2;
+}
+
+@media (max-width: 900px) {
+
+    .header-direita {
+        position: relative;
+        z-index: 3;
+
+        display: flex;
+        align-items: center;
+
+        gap: 10px;
+    }
+
+    /* a barra do topo não pode cortar o menu aberto */
+    .left-panel {
+        overflow: visible;
+        z-index: 20;
+    }
+}
 </style>
 </head>
 <body>
@@ -889,8 +1011,24 @@ a {
             <a href="home.php" class="logo-link"><div class="logo">Crypher.IA</div></a>
         </div>
 
-        <!-- troca de tela (só aparece no celular) -->
-        <a href="cadastrar.php" class="topo-acao">Cadastrar</a>
+        <!-- troca de tela + menu hambúrguer (só aparecem no celular) -->
+        <div class="header-direita">
+
+            <div class="menu-hamb">
+                <button type="button" class="hamb-botao" id="hamb-botao" title="Menu" aria-label="Menu" aria-haspopup="true" aria-expanded="false">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+
+                <div class="hamb-dropdown" id="hamb-dropdown">
+                    <a href="home.php"><i class="fa-solid fa-house"></i> Home</a>
+                    <a href="painel_api.php"><i class="fa-solid fa-robot"></i> IA</a>
+                    <a href="contato/conversa.php"><i class="fa-regular fa-comments"></i> Contato</a>
+                    <a href="home.php#sobre"><i class="fa-solid fa-circle-info"></i> Sobre nós</a>
+                </div>
+            </div>
+
+            <a href="cadastrar.php" class="topo-acao">Cadastrar</a>
+        </div>
 
         <div class="welcome">
 
@@ -1063,6 +1201,42 @@ document.querySelectorAll('.aviso').forEach(function (aviso) {
     }, 7000);
 });
 
+</script>
+<script>
+/* ===== Menu hambúrguer (celular) ===== */
+(() => {
+    const botao = document.getElementById('hamb-botao');
+    const menu = document.getElementById('hamb-dropdown');
+    if (!botao || !menu) return;
+
+    const icone = botao.querySelector('i');
+
+    const fechar = () => {
+        menu.classList.remove('ativo');
+        botao.setAttribute('aria-expanded', 'false');
+        icone.className = 'fa-solid fa-bars';
+    };
+
+    botao.addEventListener('click', (e) => {
+        e.stopPropagation();
+
+        const aberto = menu.classList.toggle('ativo');
+        botao.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+        icone.className = aberto ? 'fa-solid fa-xmark' : 'fa-solid fa-bars';
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!menu.contains(e.target)) fechar();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') fechar();
+    });
+
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 900) fechar();
+    });
+})();
 </script>
 </body>
 </html>
