@@ -22,6 +22,9 @@ $usuarioAtual = $stmtNome->fetch(PDO::FETCH_ASSOC);
 $nomeAtual = $usuarioAtual['nome'] ?? 'Usuário';
 $inicialUsuario = mb_strtoupper(mb_substr($nomeAtual, 0, 1));
 
+// Admin vai para a lista de usuários; usuário comum vai direto para o chat de contato
+$linkContato = ($usuarioId === 1) ? 'contato/admin.php' : 'contato/conversa.php';
+
 $conversas = buscarConversas($usuarioId);
 
 $conversaId = isset($_GET['conversa']) ? (int) $_GET['conversa'] : null;
@@ -59,7 +62,8 @@ function resumoConversa(array $c): string {
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="theme-color" content="#4348D9">
     <title>Analisar código - Crypher.IA</title>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
@@ -1723,180 +1727,134 @@ main {
 }
 
 /* =========================================================
-   MENU HAMBÚRGUER (mobile)
-   Escondido no desktop; aparece nas telas pequenas.
+   PADRÃO DO SITE: bolinha da conta + barra inferior (mobile)
+   Fica depois das outras regras para sobrescrevê-las.
 ========================================================= */
 
-.menu-toggle,
-.menu-mobile {
+/* barra de navegação inferior: só existe no celular */
+.nav-mobile {
     display: none;
 }
 
-.menu-toggle {
-    width: 46px;
-    height: 46px;
-
-    padding: 0;
-    border: none;
-    border-radius: 12px;
-
-    background: rgba(255, 255, 255, .14);
-
-    cursor: pointer;
-
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 5px;
-
-    -webkit-tap-highlight-color: transparent;
-    transition: background .25s ease;
-}
-
-.menu-toggle:active {
-    background: rgba(255, 255, 255, .28);
-}
-
-.menu-toggle span {
-    display: block;
-
-    width: 24px;
-    height: 3px;
-
-    border-radius: 3px;
-
-    background: #fff;
-
-    transition:
-        transform .3s ease,
-        opacity .2s ease;
-}
-
-/* três linhas viram um X */
-.menu-toggle.aberto span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
-.menu-toggle.aberto span:nth-child(2) { opacity: 0; }
-.menu-toggle.aberto span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
-
-.menu-mobile {
-    flex-direction: column;
-    gap: 4px;
-
-    background: #3539b8;
-
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-8px);
-
-    transition:
-        opacity .2s ease,
-        transform .2s ease,
-        visibility .2s ease;
-}
-
-.menu-mobile.aberto {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.menu-mobile a,
-.menu-mobile button {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-
-    width: 100%;
-    min-height: 48px;
-
-    padding: 12px 16px;
-
-    border: none;
-    border-radius: 12px;
-
-    background: transparent;
-    color: #fff;
-
-    font-size: 1rem;
-    font-weight: 600;
-    text-align: left;
-    text-decoration: none;
-
-    cursor: pointer;
-
-    transition: background .2s ease;
-}
-
-.menu-mobile a:hover,
-.menu-mobile button:hover,
-.menu-mobile a:active,
-.menu-mobile button:active {
-    background: rgba(255, 255, 255, .14);
-}
-
-.menu-mobile a.ativo {
-    background: #F3BE27;
-    color: #222;
-}
-
-
-/* =========================================================
-   PAINEL DO CHAT — MOBILE
-   Header numa linha só: logo à esquerda e hambúrguer à direita
-   (o botão Histórico fica no canto esquerdo do chat, sem encostar).
-   Fica no fim do <style> para sobrescrever as regras acima.
-========================================================= */
-
 @media (max-width: 768px) {
 
+    /* ---- header compacto: logo + bolinha da conta ---- */
+
     header {
-        flex-direction:row;
-        flex-wrap:nowrap;
-        align-items:center;
-        justify-content:space-between;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center;
+        justify-content: space-between;
 
-        height:64px;
-        min-height:64px;
+        height: calc(58px + env(safe-area-inset-top));
+        min-height: 0;
 
-        padding:0 16px;
-        gap:12px;
+        padding: env(safe-area-inset-top) 18px 0;
+        gap: 12px;
+
+        box-shadow: none;
     }
 
     .logo {
-        font-size:1.6rem;
-        text-align:left;
+        font-size: 1.4rem;
+        text-align: left;
     }
 
-    /* links soltos do header vão para o menu */
     header > nav {
-        display:none;
+        display: none;
     }
 
     .header-direita {
-        gap: 10px;
+        position: static;
+        transform: none;
+
+        gap: 0;
+        margin-left: auto;
     }
 
-    .menu-toggle {
-        display:flex;
-        flex-shrink:0;
-        margin-left:auto;
+    .conta-botao {
+        width: 40px;
+        height: 40px;
+
+        font-size: 1rem;
     }
 
-    /* cartão do menu alinhado à direita, embaixo do botão */
-    .menu-mobile {
-        display:flex;
+    .conta-botao:hover {
+        transform: none;
+    }
 
-        position:absolute;
-        top:calc(100% + 6px);
-        right:12px;
-        left:auto;
+    .conta-dropdown {
+        top: calc(100% + 8px);
 
-        width:min(260px, calc(100vw - 24px));
-        padding:8px;
+        min-width: 180px;
+    }
 
-        z-index:60;
+    /* ---- barra de navegação inferior ---- */
 
-        border-radius:16px;
-        box-shadow:0 14px 28px rgba(0, 0, 0, .28);
+    .nav-mobile {
+        flex-shrink: 0;
+
+        display: flex;
+
+        padding-bottom: env(safe-area-inset-bottom);
+
+        background: #fff;
+
+        border-top: 1px solid #e5e5ee;
+    }
+
+    .nav-mobile a {
+        flex: 1;
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+
+        gap: 3px;
+
+        padding: 8px 0 7px;
+
+        color: #9a9ab0;
+
+        text-decoration: none;
+
+        font-size: .66rem;
+        font-weight: 600;
+
+        transition: color .2s ease;
+    }
+
+    .nav-mobile a i {
+        font-size: 1.12rem;
+    }
+
+    .nav-mobile a.ativo {
+        color: #4348D9;
+    }
+
+    /* bolinha com a inicial na aba Perfil */
+    .nav-avatar {
+        width: 22px;
+        height: 22px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 50%;
+
+        background: #4348D9;
+        color: #fff;
+
+        font-size: .68rem;
+        font-weight: 700;
+
+        text-transform: uppercase;
+    }
+
+    /* teclado aberto: esconde a barra inferior para sobrar espaço */
+    body.teclado .nav-mobile {
+        display: none;
     }
 }
 
@@ -2011,6 +1969,17 @@ main {
 @media (max-width: 768px) {
     .anexo-pendente { padding: 8px 12px 0; }
 }
+
+
+/* mascote no lugar do escudo (chat vazio) */
+.chat-vazio > img {
+    width: 120px;
+    height: 120px;
+
+    margin-bottom: 14px;
+
+    object-fit: contain;
+}
 </style>
 <body>
     <header>
@@ -2018,7 +1987,7 @@ main {
 
         <nav>
             <a href="home.php">Home</a>
-            <a href="contato/conversa.php">Contato</a>
+            <a href="<?= $linkContato ?>">Contato</a>
         </nav>
 
         <div class="header-direita">
@@ -2032,17 +2001,6 @@ main {
                     <a href="logout.php"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sair</a>
                 </div>
             </div>
-
-            <button type="button" class="menu-toggle" id="menuToggle" aria-label="Abrir menu" aria-controls="menuMobile" aria-expanded="false">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-        </div>
-
-        <div class="menu-mobile" id="menuMobile" role="navigation" aria-label="Menu principal">
-            <a href="home.php"><i class="fa-solid fa-house"></i> Home</a>
-            <a href="contato/conversa.php"><i class="fa-solid fa-envelope"></i> Contato</a>
         </div>
     </header>
 
@@ -2090,7 +2048,7 @@ main {
 
                 <?php if (count($historico) === 0): ?>
                     <div class="chat-vazio">
-                        <i class="fa-solid fa-shield-halved"></i>
+                        <img src="../assets/img/mascote_s_fundo.png" alt="Mascote Crypher.IA">
                         <h3>Nenhuma análise por aqui ainda</h3>
                         <p>Cole um trecho de código ou envie um arquivo abaixo para a IA começar a procurar vulnerabilidades.</p>
                     </div>
@@ -2169,6 +2127,26 @@ main {
 
         </div>
     </main>
+
+    <!-- Barra de navegação inferior (só aparece no celular) -->
+    <nav class="nav-mobile">
+        <a href="home.php">
+            <i class="fa-solid fa-house"></i>
+            <span>Home</span>
+        </a>
+        <a href="painel_api.php" class="ativo">
+            <i class="fa-solid fa-robot"></i>
+            <span>IA</span>
+        </a>
+        <a href="<?= $linkContato ?>">
+            <i class="fa-regular fa-comments"></i>
+            <span>Contato</span>
+        </a>
+        <a href="perfil.php">
+            <span class="nav-avatar"><?= htmlspecialchars($inicialUsuario) ?></span>
+            <span>Perfil</span>
+        </a>
+    </nav>
 
     <script>
     (() => {
@@ -2423,39 +2401,37 @@ main {
 })();
 </script>
 <script>
-/* ===== Menu hambúrguer (mobile) ===== */
+/* ===== Teclado do celular ===== */
 (() => {
-    const btn  = document.getElementById('menuToggle');
-    const menu = document.getElementById('menuMobile');
-    if (!btn || !menu) return;
+    const textarea = document.getElementById('texto');
+    if (!textarea) return;
 
-    const fechar = () => {
-        btn.classList.remove('aberto');
-        menu.classList.remove('aberto');
-        btn.setAttribute('aria-expanded', 'false');
-    };
+    const ehMobile = () => window.innerWidth <= 768;
 
-    btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const aberto = menu.classList.toggle('aberto');
-        btn.classList.toggle('aberto', aberto);
-        btn.setAttribute('aria-expanded', String(aberto));
+    // Acompanha a altura visível da tela (corrige o iPhone)
+    function ajustarAltura() {
+        if (window.visualViewport && ehMobile()) {
+            document.body.style.height = window.visualViewport.height + 'px';
+            window.scrollTo(0, 0);
+            const chat = document.getElementById('chat');
+            if (chat) chat.scrollTop = chat.scrollHeight;
+        } else {
+            document.body.style.height = '';
+        }
+    }
+
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', ajustarAltura);
+    }
+    window.addEventListener('resize', ajustarAltura);
+    ajustarAltura();
+
+    // Esconde a barra inferior enquanto o teclado está aberto
+    textarea.addEventListener('focus', () => {
+        if (ehMobile()) document.body.classList.add('teclado');
     });
-
-    menu.addEventListener('click', (e) => {
-        if (e.target.closest('a, button')) fechar();
-    });
-
-    document.addEventListener('click', (e) => {
-        if (!menu.contains(e.target) && !btn.contains(e.target)) fechar();
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') fechar();
-    });
-
-    window.addEventListener('resize', () => {
-        if (window.innerWidth > 768) fechar();
+    textarea.addEventListener('blur', () => {
+        document.body.classList.remove('teclado');
     });
 })();
 </script>

@@ -56,9 +56,6 @@
         }
     }
 
-    // Link da aba "Contato" na barra inferior do celular
-    $linkContato = $ehAdmin ? 'admin.php' : 'conversa.php';
-
     $flash_success = $_SESSION['flash_success'] ?? null;
     $flash_error   = $_SESSION['flash_error']   ?? null;
     unset($_SESSION['flash_success'], $_SESSION['flash_error']);
@@ -91,8 +88,8 @@
 /* =========================================
    CRYPHER.IA - CONTATO
    Desktop: banner + coluna lateral + thread
-   Mobile: app de chat em tela cheia com
-   barra de navegação inferior
+   Mobile: app de chat em tela cheia
+   (sem barra de navegação inferior)
 ========================================= */
 
 * {
@@ -303,9 +300,9 @@ header nav a:hover {
 }
 
 
-/* barra de navegação inferior: só existe no celular */
-
-.nav-mobile {
+/* itens do menu da bolinha que só aparecem no celular
+   (o Contato não tem barra inferior) */
+.conta-dropdown .so-mobile {
     display: none;
 }
 
@@ -1395,70 +1392,10 @@ main {
         display: none;
     }
 
-    /* ---- barra de navegação inferior ---- */
+    /* ---- sem barra inferior: Home e IA ficam no menu da bolinha ---- */
 
-    .nav-mobile {
-        flex-shrink: 0;
-
+    .conta-dropdown .so-mobile {
         display: flex;
-
-        padding-bottom: env(safe-area-inset-bottom);
-
-        background: #fff;
-
-        border-top: 1px solid var(--borda);
-    }
-
-    .nav-mobile a {
-        flex: 1;
-
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-
-        gap: 3px;
-
-        padding: 8px 0 7px;
-
-        color: #9a9ab0;
-
-        font-size: .66rem;
-        font-weight: 600;
-
-        transition: color .2s ease;
-    }
-
-    .nav-mobile a i {
-        font-size: 1.12rem;
-    }
-
-    .nav-mobile a.ativo {
-        color: var(--azul);
-    }
-
-    /* bolinha com a inicial na aba Perfil */
-    .nav-avatar {
-        width: 22px;
-        height: 22px;
-
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        border-radius: 50%;
-
-        background: var(--azul);
-        color: #fff;
-
-        font-size: .68rem;
-        font-weight: 700;
-
-        text-transform: uppercase;
-    }
-
-    /* teclado aberto: esconde a barra inferior para sobrar espaço */
-    body.teclado .nav-mobile {
-        display: none;
     }
 }
     </style>
@@ -1478,6 +1415,8 @@ main {
             </button>
 
             <div class="conta-dropdown" id="conta-dropdown">
+                <a href="../home.php" class="so-mobile"><i class="fa-solid fa-house"></i> Home</a>
+                <a href="../painel_api.php" class="so-mobile"><i class="fa-solid fa-robot"></i> IA</a>
                 <a href="../perfil.php"><i class="fa-regular fa-user"></i> Meu perfil</a>
                 <a href="../logout.php"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sair</a>
             </div>
@@ -1616,26 +1555,6 @@ main {
         </div>
     </main>
 
-    <!-- Barra de navegação inferior (só aparece no celular) -->
-    <nav class="nav-mobile">
-        <a href="../home.php">
-            <i class="fa-solid fa-house"></i>
-            <span>Home</span>
-        </a>
-        <a href="../painel_api.php">
-            <i class="fa-solid fa-robot"></i>
-            <span>IA</span>
-        </a>
-        <a href="<?= $linkContato ?>" class="ativo">
-            <i class="fa-regular fa-comments"></i>
-            <span>Contato</span>
-        </a>
-        <a href="../perfil.php">
-            <span class="nav-avatar"><?= htmlspecialchars($inicialUsuario) ?></span>
-            <span>Perfil</span>
-        </a>
-    </nav>
-
     <script>
     (() => {
         const container      = document.getElementById('messages-container');
@@ -1711,14 +1630,6 @@ main {
         }
         window.addEventListener('resize', ajustarAltura);
         ajustarAltura();
-
-        // Esconde a barra inferior enquanto o teclado está aberto
-        textarea.addEventListener('focus', () => {
-            if (ehMobile()) document.body.classList.add('teclado');
-        });
-        textarea.addEventListener('blur', () => {
-            document.body.classList.remove('teclado');
-        });
 
         // Campo de texto cresce conforme a pessoa digita
         function ajustarTextarea() {

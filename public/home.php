@@ -72,21 +72,20 @@ nav a:hover{ opacity:.7; }
 }
 .btn-cadastro:hover{ transform:translateY(-3px) scale(1.03); box-shadow:0 12px 24px rgba(243,190,39,.45); }
 
-.conta-menu{ position:relative; }
+.conta-menu{ position:relative; flex-shrink:0; }
 
 .conta-botao{
     width:46px; height:46px;
     display:flex; align-items:center; justify-content:center;
-    background:linear-gradient(145deg, #ffffff, #F3BE27);
-    color:#4348D9;
-    border:2px solid #fff;
-    border-radius:50%;
-    font-weight:700; font-size:1.15rem; line-height:1;
+    background:#fff; color:#4348D9;
+    border:none; border-radius:50%;
+    font-family:inherit; font-weight:700; font-size:1.15rem; line-height:1;
+    text-transform:uppercase;
     cursor:pointer;
-    box-shadow:0 4px 14px rgba(0,0,0,.22);
+    box-shadow:0 4px 12px rgba(0,0,0,.18);
     transition:.3s ease;
 }
-.conta-botao:hover{ transform:translateY(-2px) scale(1.05); box-shadow:0 10px 20px rgba(0,0,0,.3); }
+.conta-botao:hover{ transform:translateY(-2px); box-shadow:0 8px 18px rgba(0,0,0,.25); }
 
 .conta-dropdown{
     display:none; position:absolute; top:calc(100% + 10px); right:0;
@@ -95,8 +94,13 @@ nav a:hover{ opacity:.7; }
     z-index:200;
 }
 .conta-dropdown.ativo{ display:block; }
-.conta-dropdown a{ display:block; padding:13px 20px; color:#222; font-size:.9rem; font-weight:500; transition:.2s ease; }
+.conta-dropdown a{ display:flex; align-items:center; gap:10px; padding:13px 20px; color:#222; font-size:.9rem; font-weight:500; transition:.2s ease; }
+.conta-dropdown a i{ width:16px; text-align:center; color:#4348D9; }
 .conta-dropdown a:hover{ background:#f2f2f2; }
+.conta-dropdown .so-mobile{ display:none; }
+
+/* barra de navegação inferior: só existe no celular */
+.nav-mobile{ display:none; }
 
 .hero{
     position:relative; z-index:2;
@@ -567,13 +571,8 @@ a { text-decoration:none; color:inherit; }
 
 
 /* =========================================================
-   MENU HAMBÚRGUER (mobile)
-   Escondido no desktop; no celular fica no canto direito do
-   header e abre um cartão branco logo abaixo do botão.
+   MOBILE: header (logo + bolinha) e barra de navegação inferior
 ========================================================= */
-
-.menu-toggle,
-.menu-mobile { display:none; }
 
 .equipe-indicadores { display:none; }
 
@@ -596,123 +595,56 @@ a { text-decoration:none; color:inherit; }
 
     .logo { font-size:1.6rem; flex-shrink:0; }
 
-    /* os links soltos vão para o menu */
+    /* os links viram a barra de navegação inferior */
     header > nav { display:none; }
 
     header .conta-menu,
     header .btn-cadastro { margin-left:auto; }
 
-    /* ---------- botão das três linhas ---------- */
+    header .btn-cadastro { height:42px; padding:0 20px; font-size:.9rem; }
 
-    .menu-toggle {
+    .conta-botao { width:40px; height:40px; font-size:1rem; }
+    .conta-botao:hover { transform:none; }
+    .conta-dropdown { top:calc(100% + 8px); }
+
+    /* ---------- barra de navegação inferior ---------- */
+
+    body { padding-bottom:calc(62px + env(safe-area-inset-bottom)); }
+
+    .nav-mobile {
+        position:fixed; left:0; right:0; bottom:0;
+        z-index:150;
         display:flex;
-        flex-direction:column;
-        justify-content:center;
-        align-items:center;
-        gap:5px;
-
-        flex-shrink:0;
-
-        width:46px;
-        height:46px;
-        padding:0;
-
-        border:none;
-        border-radius:12px;
-
-        background:rgba(255, 255, 255, .18);
-
-        cursor:pointer;
-        -webkit-tap-highlight-color:transparent;
-        transition:background .25s ease;
-    }
-
-    .menu-toggle:active { background:rgba(255, 255, 255, .32); }
-
-    .menu-toggle span {
-        display:block;
-        width:24px;
-        height:3px;
-        border-radius:3px;
+        padding-bottom:env(safe-area-inset-bottom);
         background:#fff;
-        transition:transform .3s ease, opacity .2s ease;
+        border-top:1px solid #e5e5ee;
+        box-shadow:0 -4px 16px rgba(0,0,0,.08);
     }
 
-    /* três linhas viram um X */
-    .menu-toggle.aberto span:nth-child(1) { transform:translateY(8px) rotate(45deg); }
-    .menu-toggle.aberto span:nth-child(2) { opacity:0; }
-    .menu-toggle.aberto span:nth-child(3) { transform:translateY(-8px) rotate(-45deg); }
-
-    /* ---------- cartão do menu ---------- */
-
-    .menu-mobile {
-        display:flex;
-        flex-direction:column;
-        gap:4px;
-
-        position:absolute;
-        top:calc(100% + 4px);
-        right:14px;
-
-        width:min(270px, calc(100vw - 28px));
-        padding:8px;
-
-        border-radius:16px;
-        background:#fff;
-        box-shadow:0 18px 40px rgba(0, 0, 0, .28);
-
-        opacity:0;
-        visibility:hidden;
-        transform:translateY(-8px);
-        transition:opacity .2s ease, transform .2s ease, visibility .2s ease;
+    .nav-mobile a {
+        flex:1;
+        display:flex; flex-direction:column; align-items:center;
+        gap:3px;
+        padding:8px 0 7px;
+        color:#9a9ab0;
+        font-size:.66rem; font-weight:600;
+        transition:color .2s ease;
     }
 
-    .menu-mobile.aberto {
-        opacity:1;
-        visibility:visible;
-        transform:translateY(0);
+    .nav-mobile a i { font-size:1.12rem; }
+    .nav-mobile a.ativo { color:#4348D9; }
+
+    .nav-avatar {
+        width:22px; height:22px;
+        display:flex; align-items:center; justify-content:center;
+        border-radius:50%;
+        background:#4348D9; color:#fff;
+        font-size:.68rem; font-weight:700;
+        text-transform:uppercase;
     }
 
-    .menu-mobile a,
-    .menu-mobile button {
-        display:flex;
-        align-items:center;
-        gap:12px;
-
-        width:100%;
-        min-height:48px;
-        padding:12px 14px;
-
-        border:none;
-        border-radius:12px;
-
-        background:transparent;
-        color:#222;
-
-        font-size:1rem;
-        font-weight:600;
-        text-align:left;
-        text-decoration:none;
-
-        cursor:pointer;
-        transition:background .2s ease;
-    }
-
-    .menu-mobile i {
-        width:20px;
-        text-align:center;
-        color:#4348D9;
-    }
-
-    .menu-mobile a:hover,
-    .menu-mobile button:hover,
-    .menu-mobile a:active,
-    .menu-mobile button:active { background:#f0f0fb; }
-
-    .menu-mobile .destaque { background:#F3BE27; }
-    .menu-mobile .destaque i { color:#222; }
-    .menu-mobile .destaque:hover,
-    .menu-mobile .destaque:active { background:#e6b21e; }
+    /* itens do menu da bolinha que só aparecem no celular */
+    .conta-dropdown .so-mobile { display:flex; }
 
     /* ---------- equipe vira carrossel (arrastar com o dedo) ---------- */
 
@@ -750,11 +682,6 @@ a { text-decoration:none; color:inherit; }
         gap:10px;
         margin-top:4px;
     }
-}
-
-/* celulares bem estreitos: Cadastre-se vai só para o menu */
-@media (max-width: 480px) {
-    header .btn-cadastro { display:none; }
 }
 
 /* =========================================================
@@ -842,31 +769,43 @@ a { text-decoration:none; color:inherit; }
             <button type="button" class="conta-botao" onclick="toggleContaMenu();" title="<?= htmlspecialchars($nomeUsuario) ?>" aria-label="Minha conta"><?= htmlspecialchars($inicialUsuario) ?></button>
 
             <div class="conta-dropdown" id="contaDropdown">
-                <a href="perfil.php">Configurações</a>
-                <a href="logout.php">Sair</a>
+                <a href="#sobre" class="so-mobile"><i class="fa-solid fa-circle-info"></i> Sobre nós</a>
+                <a href="perfil.php"><i class="fa-regular fa-user"></i> Meu perfil</a>
+                <a href="logout.php"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sair</a>
             </div>
         </div>
     <?php else: ?>
         <a href="cadastrar.php" class="btn-cadastro">Cadastre-se</a>
     <?php endif; ?>
 
-    <!-- menu hambúrguer (mobile) -->
-    <button type="button" class="menu-toggle" id="menuToggle" aria-label="Abrir menu" aria-controls="menuMobile" aria-expanded="false">
-        <span></span>
-        <span></span>
-        <span></span>
-    </button>
-
-    <div class="menu-mobile" id="menuMobile" role="navigation" aria-label="Menu principal">
-        <button type="button" onclick="Verlogar('contato/conversa.php');"><i class="fa-solid fa-envelope"></i> Contato</button>
-        <button type="button" onclick="Verlogar('painel_api.php');"><i class="fa-solid fa-robot"></i> IA</button>
-        <a href="#sobre"><i class="fa-solid fa-circle-info"></i> Sobre nós</a>
-        <?php if (!$usuarioLogado): ?>
-            <a href="cadastrar.php" class="destaque"><i class="fa-solid fa-user-plus"></i> Cadastre-se</a>
-        <?php endif; ?>
-    </div>
-
 </header>
+
+<!-- Barra de navegação inferior (só aparece no celular) -->
+<nav class="nav-mobile" aria-label="Menu principal">
+    <a href="home.php" class="ativo">
+        <i class="fa-solid fa-house"></i>
+        <span>Home</span>
+    </a>
+    <a href="painel_api.php" onclick="Verlogar('painel_api.php'); return false;">
+        <i class="fa-solid fa-robot"></i>
+        <span>IA</span>
+    </a>
+    <a href="contato/conversa.php" onclick="Verlogar('contato/conversa.php'); return false;">
+        <i class="fa-regular fa-comments"></i>
+        <span>Contato</span>
+    </a>
+    <?php if ($usuarioLogado): ?>
+        <a href="perfil.php">
+            <span class="nav-avatar"><?= htmlspecialchars($inicialUsuario) ?></span>
+            <span>Perfil</span>
+        </a>
+    <?php else: ?>
+        <a href="login.php">
+            <i class="fa-regular fa-user"></i>
+            <span>Entrar</span>
+        </a>
+    <?php endif; ?>
+</nav>
 
 <div class="modal-overlay" id="modalLogin">
     <div class="modal-caixa">
@@ -1282,6 +1221,12 @@ a { text-decoration:none; color:inherit; }
         document.getElementById('contaDropdown').classList.toggle('ativo');
     }
 
+    // Fecha o menu com a tecla Esc
+    document.addEventListener('keydown', (evento) => {
+        const dropdown = document.getElementById('contaDropdown');
+        if (evento.key === 'Escape' && dropdown) dropdown.classList.remove('ativo');
+    });
+
     // Fecha o menu se a pessoa clicar em qualquer lugar fora dele
     document.addEventListener('click', (evento) => {
         const menu = document.querySelector('.conta-menu');
@@ -1535,44 +1480,6 @@ document.addEventListener("DOMContentLoaded", () => {
     atualizarCarrossel();
 
 });
-</script>
-
-<script>
-/* ===== Menu hambúrguer (mobile) ===== */
-(() => {
-    const btn  = document.getElementById('menuToggle');
-    const menu = document.getElementById('menuMobile');
-    if (!btn || !menu) return;
-
-    const fechar = () => {
-        btn.classList.remove('aberto');
-        menu.classList.remove('aberto');
-        btn.setAttribute('aria-expanded', 'false');
-    };
-
-    btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const aberto = menu.classList.toggle('aberto');
-        btn.classList.toggle('aberto', aberto);
-        btn.setAttribute('aria-expanded', String(aberto));
-    });
-
-    menu.addEventListener('click', (e) => {
-        if (e.target.closest('a, button')) fechar();
-    });
-
-    document.addEventListener('click', (e) => {
-        if (!menu.contains(e.target) && !btn.contains(e.target)) fechar();
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') fechar();
-    });
-
-    window.addEventListener('resize', () => {
-        if (window.innerWidth > 768) fechar();
-    });
-})();
 </script>
 
 <script>

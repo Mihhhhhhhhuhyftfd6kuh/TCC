@@ -15,6 +15,13 @@ $stmtUsuario->bindParam(':id', $id, PDO::PARAM_INT);
 $stmtUsuario->execute();
 $usuario = $stmtUsuario->fetch(PDO::FETCH_ASSOC);
 
+// Inicial exibida na bolinha da conta
+$nomeAtual = trim((string) ($usuario['nome'] ?? ''));
+$inicialUsuario = $nomeAtual !== '' ? mb_strtoupper(mb_substr($nomeAtual, 0, 1)) : '?';
+
+// Admin vai para a lista de usuários; usuário comum vai direto para o chat de contato
+$linkContato = ((int) $id === 1) ? 'contato/admin.php' : 'contato/conversa.php';
+
 // atualizar_perfil.php manda ?sucesso=1 ou ?sucesso=mensagem; os arquivos de
 // apagar mandam ?sucesso=mensagem. Os dois casos são tratados aqui.
 $sucesso = $_GET['sucesso'] ?? null;
@@ -34,342 +41,843 @@ if (!in_array($abaAtiva, ['dados', 'privacidade'], true)) {
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#4348D9">
     <title>Meu perfil - Crypher.IA</title>
 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="../assets/img/mascote_s_fundo.png">
 
     <style>
-        * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
+/* =========================================
+   CRYPHER.IA - MEU PERFIL
+   Mesmo padrão da página da IA: header azul com
+   bolinha da conta e, no celular, barra de
+   navegação inferior
+========================================= */
 
-        body { background:#ECECEC; min-height:100vh; padding-bottom:60px; }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
 
-        header {
-            background:#4348D9;
-            padding:20px 40px;
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-        }
+    -webkit-tap-highlight-color: transparent;
+}
 
-        header .logo {
-            color:#fff;
-            font-size:1.6rem;
-            font-weight:700;
-            white-space:nowrap;
-            overflow:hidden;
-            text-overflow:ellipsis;
-        }
+:root {
+    --azul: #4348D9;
+    --azul-escuro: #3539b8;
+    --azul-claro: #eeeeff;
+    --amarelo: #F3BE27;
+    --fundo: #f5f6ff;
+    --texto: #202020;
+    --borda: #e5e5ee;
+}
 
-        header nav a {
-            color:#fff;
-            text-decoration:none;
-            font-weight:500;
-            margin-left:25px;
-        }
 
-        header nav a:hover { opacity:.8; }
+/* =========================================
+   PÁGINA (100% da janela; só o conteúdo rola)
+========================================= */
 
-        /* ===== Menu hambúrguer (mobile) ===== */
-        .menu-toggle,
-        .menu-mobile { display:none; }
+html,
+body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
 
-        .menu-toggle {
-            width:42px; height:42px;
-            padding:0; border:none; border-radius:10px;
-            background:rgba(255,255,255,.14);
-            cursor:pointer;
-            flex-direction:column;
-            justify-content:center; align-items:center;
-            gap:5px;
-            -webkit-tap-highlight-color:transparent;
-            transition:background .25s ease;
-        }
-        .menu-toggle:active { background:rgba(255,255,255,.28); }
+body {
+    height: 100dvh;
+    background: var(--azul);
+    color: var(--texto);
 
-        .menu-toggle span {
-            display:block; width:22px; height:3px;
-            border-radius:3px; background:#fff;
-            transition:transform .3s ease, opacity .2s ease;
-        }
-        .menu-toggle.aberto span:nth-child(1) { transform:translateY(8px) rotate(45deg); }
-        .menu-toggle.aberto span:nth-child(2) { opacity:0; }
-        .menu-toggle.aberto span:nth-child(3) { transform:translateY(-8px) rotate(-45deg); }
+    display: flex;
+    flex-direction: column;
+}
 
-        .menu-mobile {
-            flex-direction:column;
-            align-items:center;
-            text-align:center;
-            gap:4px;
-            background:#3539b8;
-            opacity:0; visibility:hidden; transform:translateY(-8px);
-            transition:opacity .2s ease, transform .2s ease, visibility .2s ease;
-        }
-        .menu-mobile.aberto { opacity:1; visibility:visible; transform:translateY(0); }
 
-        .menu-mobile a {
-            display:flex; justify-content:center; align-items:center;
-            width:100%; min-height:46px;
-            padding:12px 16px;
-            border-radius:12px;
-            color:#fff; text-decoration:none;
-            font-size:1rem; font-weight:600;
-            text-align:center;
-            transition:background .2s ease;
-        }
-        .menu-mobile a:hover,
-        .menu-mobile a:active { background:rgba(255,255,255,.14); }
+/* =========================================
+   HEADER
+========================================= */
 
-        @media (max-width:640px) {
-            header nav { display:none; }
+header {
+    width: 100%;
+    height: 78px;
+    flex-shrink: 0;
 
-            .menu-toggle {
-                display:flex;
-                position:fixed; top:14px; right:16px; z-index:100;
-            }
+    padding: 0 55px;
 
-            .menu-mobile {
-                display:flex;
-                position:fixed; top:70px; left:12px; right:12px; z-index:99;
-                padding:10px;
-                border-radius:16px;
-                box-shadow:0 14px 30px rgba(0,0,0,.28);
-            }
+    background: var(--azul);
 
-            header .logo { font-size:1.3rem; max-width:60%; }
-        }
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 
-        main { max-width:700px; margin:40px auto; padding:0 20px; }
+    position: relative;
+    z-index: 10;
 
-        h1 { margin-bottom:25px; color:#222; }
+    box-shadow: 0 5px 20px rgba(0, 0, 0, .12);
+}
 
-        .flash-success, .flash-error {
-            padding:12px 16px;
-            border-radius:8px;
-            margin-bottom:20px;
-            font-size:.9rem;
-        }
-        .flash-success { background:#d4edda; color:#155724; }
-        .flash-error   { background:#f8d7da; color:#721c24; }
+.logo {
+    color: #fff;
 
-        /* ===== Abas ===== */
-        .abas {
-            display:flex;
-            gap:8px;
-            margin-bottom:20px;
-            border-bottom:2px solid #ddd;
-        }
+    font-size: 2rem;
+    font-weight: 700;
 
-        .aba-botao {
-            border:none;
-            background:transparent;
-            padding:12px 20px;
-            font-size:.95rem;
-            font-weight:600;
-            color:#666;
-            cursor:pointer;
-            border-bottom:3px solid transparent;
-            margin-bottom:-2px;
-            transition:.2s ease;
-        }
+    letter-spacing: -.5px;
 
-        .aba-botao:hover { color:#222; }
+    text-decoration: none;
 
-        .aba-botao.ativa {
-            color:#4348D9;
-            border-bottom-color:#4348D9;
-        }
+    flex-shrink: 0;
+}
 
-        .aba-conteudo { display:none; }
-        .aba-conteudo.ativa { display:block; }
+header nav {
+    position: absolute;
 
-        .card {
-            background:#fff;
-            border-radius:14px;
-            padding:30px;
-            margin-bottom:25px;
-            box-shadow:0 8px 20px rgba(0,0,0,.08);
-        }
+    left: 50%;
+    top: 50%;
 
-        .card h2 { font-size:1.2rem; margin-bottom:6px; color:#222; }
-        .card p.desc { color:#666; font-size:.9rem; margin:6px 0 18px; }
+    transform: translate(-50%, -50%);
 
-        label { display:block; font-weight:600; margin-bottom:6px; color:#333; }
+    display: flex;
+    align-items: center;
 
-        input[type=text], input[type=email], input[type=password] {
-            width:100%;
-            height:44px;
-            border:1px solid #ccc;
-            border-radius:8px;
-            padding:0 14px;
-            margin-bottom:18px;
-            font-size:1rem;
-        }
+    gap: 12px;
+}
 
-        .campo-senha-nova {
-            border-top: 1px solid #eee;
-            margin-top: 6px;
-            padding-top: 18px;
-        }
+header nav a {
+    color: rgba(255, 255, 255, .9);
 
-        .campo-senha-nova p.desc { margin-top: 0; }
+    text-decoration: none;
 
-        button {
-            border:none;
-            border-radius:999px;
-            padding:12px 26px;
-            font-weight:700;
-            font-size:.95rem;
-            cursor:pointer;
-            transition:.25s ease;
-        }
+    font-size: .9rem;
+    font-weight: 600;
 
-        .btn-salvar { background:#F3BE27; color:#222; }
-        .btn-salvar:hover { transform:translateY(-2px); box-shadow:0 8px 16px rgba(243,190,39,.35); }
+    padding: 10px 17px;
 
-        .zona-perigo h2 { color:#c00; }
+    border-radius: 999px;
 
-        .btn-apagar { background:#fff; color:#c00; border:2px solid #c00; }
-        .btn-apagar:hover { background:#c00; color:#fff; }
+    transition:
+        background .25s ease,
+        color .25s ease;
+}
+
+header nav a:hover {
+    background: rgba(255, 255, 255, .15);
+    color: #fff;
+}
+
+
+/* =========================================
+   BOLINHA DA CONTA (mesmo estilo da Home e da IA)
+========================================= */
+
+.conta-menu {
+    position: relative;
+
+    flex-shrink: 0;
+}
+
+.conta-botao {
+    width: 46px;
+    height: 46px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #fff;
+    color: #4348D9;
+
+    border: none;
+    border-radius: 50%;
+
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 1.15rem;
+    line-height: 1;
+
+    text-transform: uppercase;
+
+    cursor: pointer;
+
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .18);
+
+    transition: .3s ease;
+}
+
+.conta-botao:hover {
+    transform: translateY(-2px);
+
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .25);
+}
+
+.conta-dropdown {
+    display: none;
+
+    position: absolute;
+
+    top: calc(100% + 10px);
+    right: 0;
+
+    min-width: 190px;
+
+    background: #fff;
+
+    border-radius: 12px;
+
+    overflow: hidden;
+
+    box-shadow: 0 15px 35px rgba(0, 0, 0, .22);
+
+    z-index: 200;
+}
+
+.conta-dropdown.ativo {
+    display: block;
+}
+
+.conta-dropdown a {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 13px 20px;
+
+    color: #222;
+
+    text-decoration: none;
+
+    font-size: .9rem;
+    font-weight: 500;
+
+    transition: .2s ease;
+}
+
+.conta-dropdown a i {
+    width: 16px;
+
+    text-align: center;
+
+    color: var(--azul);
+}
+
+.conta-dropdown a:hover {
+    background: #f2f2f2;
+}
+
+
+/* barra de navegação inferior: só existe no celular */
+
+.nav-mobile {
+    display: none;
+}
+
+
+/* =========================================
+   CONTEÚDO (área que rola)
+========================================= */
+
+main {
+    flex: 1;
+    min-height: 0;
+
+    width: 100%;
+
+    background: var(--fundo);
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    -webkit-overflow-scrolling: touch;
+}
+
+main::-webkit-scrollbar {
+    width: 6px;
+}
+
+main::-webkit-scrollbar-thumb {
+    background: #d1d2e8;
+
+    border-radius: 999px;
+}
+
+.conteudo {
+    max-width: 700px;
+
+    margin: 0 auto;
+    padding: 40px 20px 60px;
+}
+
+h1 {
+    margin-bottom: 25px;
+
+    color: #222;
+
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+
+/* =========================================
+   AVISOS
+========================================= */
+
+.flash-success,
+.flash-error {
+    padding: 12px 16px;
+
+    border-radius: 12px;
+
+    margin-bottom: 20px;
+
+    font-size: .9rem;
+}
+
+.flash-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.flash-error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+
+/* =========================================
+   ABAS
+========================================= */
+
+.abas {
+    display: flex;
+    gap: 8px;
+
+    margin-bottom: 20px;
+
+    border-bottom: 2px solid var(--borda);
+
+    overflow-x: auto;
+
+    scrollbar-width: none;
+}
+
+.abas::-webkit-scrollbar {
+    display: none;
+}
+
+.aba-botao {
+    flex-shrink: 0;
+
+    border: none;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+
+    background: transparent;
+
+    padding: 12px 20px;
+    margin-bottom: -2px;
+
+    font-family: inherit;
+    font-size: .95rem;
+    font-weight: 600;
+
+    color: #666;
+
+    cursor: pointer;
+
+    transition: .2s ease;
+}
+
+.aba-botao:hover {
+    color: #222;
+}
+
+.aba-botao.ativa {
+    color: var(--azul);
+
+    border-bottom-color: var(--azul);
+}
+
+.aba-conteudo {
+    display: none;
+}
+
+.aba-conteudo.ativa {
+    display: block;
+}
+
+
+/* =========================================
+   CARTÕES E FORMULÁRIOS
+========================================= */
+
+.card {
+    background: #fff;
+
+    border: 1px solid var(--borda);
+    border-radius: 20px;
+
+    padding: 30px;
+    margin-bottom: 25px;
+
+    box-shadow: 0 8px 25px rgba(45, 45, 100, .07);
+}
+
+.card h2 {
+    font-size: 1.2rem;
+
+    margin-bottom: 6px;
+
+    color: #222;
+}
+
+.card p.desc {
+    color: #666;
+
+    font-size: .9rem;
+    line-height: 1.55;
+
+    margin: 6px 0 18px;
+}
+
+label {
+    display: block;
+
+    font-weight: 600;
+
+    margin-bottom: 6px;
+
+    color: #333;
+}
+
+input[type=text],
+input[type=email],
+input[type=password] {
+    width: 100%;
+    height: 46px;
+
+    border: 2px solid var(--borda);
+    border-radius: 12px;
+
+    outline: none;
+
+    background: #fafaff;
+
+    padding: 0 14px;
+    margin-bottom: 18px;
+
+    font-family: inherit;
+    font-size: 1rem;
+
+    transition:
+        border-color .2s ease,
+        box-shadow .2s ease,
+        background .2s ease;
+}
+
+input[type=text]:focus,
+input[type=email]:focus,
+input[type=password]:focus {
+    border-color: var(--azul);
+
+    background: #fff;
+
+    box-shadow: 0 0 0 3px rgba(67, 72, 217, .08);
+}
+
+.campo-senha-nova {
+    border-top: 1px solid #eee;
+
+    margin-top: 6px;
+    padding-top: 18px;
+}
+
+.campo-senha-nova p.desc {
+    margin-top: 0;
+}
+
+button {
+    border: none;
+    border-radius: 999px;
+
+    padding: 12px 26px;
+
+    font-family: inherit;
+    font-weight: 700;
+    font-size: .95rem;
+
+    cursor: pointer;
+
+    transition: .25s ease;
+}
+
+.btn-salvar {
+    background: var(--amarelo);
+    color: #222;
+}
+
+.btn-salvar:hover {
+    transform: translateY(-2px);
+
+    box-shadow: 0 8px 16px rgba(243, 190, 39, .35);
+}
+
+.zona-perigo h2 {
+    color: #c00;
+}
+
+.btn-apagar {
+    background: #fff;
+    color: #c00;
+
+    border: 2px solid #c00;
+}
+
+.btn-apagar:hover {
+    background: #c00;
+    color: #fff;
+}
+
+
+/* =========================================
+   TABLET
+========================================= */
+
+@media (max-width: 1050px) {
+
+    header {
+        padding: 0 30px;
+    }
+}
+
+
+/* =========================================
+   MOBILE (app com barra de navegação inferior)
+========================================= */
+
+@media (max-width: 768px) {
+
+    /* ---- header compacto: logo + bolinha da conta ---- */
+
+    header {
+        height: calc(58px + env(safe-area-inset-top));
+
+        padding: env(safe-area-inset-top) 18px 0;
+
+        box-shadow: none;
+    }
+
+    .logo {
+        font-size: 1.4rem;
+    }
+
+    header nav {
+        display: none;
+    }
+
+    .conta-botao {
+        width: 40px;
+        height: 40px;
+
+        font-size: 1rem;
+    }
+
+    .conta-botao:hover {
+        transform: none;
+    }
+
+    .conta-dropdown {
+        top: calc(100% + 8px);
+
+        min-width: 180px;
+    }
+
+    /* ---- conteúdo ---- */
+
+    .conteudo {
+        padding: 22px 14px 30px;
+    }
+
+    h1 {
+        margin-bottom: 18px;
+
+        font-size: 1.5rem;
+    }
+
+    .card {
+        padding: 22px 18px;
+
+        border-radius: 17px;
+    }
+
+    .aba-botao {
+        padding: 11px 14px;
+
+        font-size: .88rem;
+    }
+
+    /* 16px evita o zoom automático do iPhone ao focar no campo */
+    input[type=text],
+    input[type=email],
+    input[type=password] {
+        height: 48px;
+
+        font-size: 16px;
+    }
+
+    .btn-salvar,
+    .btn-apagar {
+        width: 100%;
+    }
+
+    /* ---- barra de navegação inferior ---- */
+
+    .nav-mobile {
+        flex-shrink: 0;
+
+        display: flex;
+
+        padding-bottom: env(safe-area-inset-bottom);
+
+        background: #fff;
+
+        border-top: 1px solid var(--borda);
+    }
+
+    .nav-mobile a {
+        flex: 1;
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+
+        gap: 3px;
+
+        padding: 8px 0 7px;
+
+        color: #9a9ab0;
+
+        text-decoration: none;
+
+        font-size: .66rem;
+        font-weight: 600;
+
+        transition: color .2s ease;
+    }
+
+    .nav-mobile a i {
+        font-size: 1.12rem;
+    }
+
+    .nav-mobile a.ativo {
+        color: var(--azul);
+    }
+
+    /* bolinha com a inicial na aba Perfil */
+    .nav-avatar {
+        width: 22px;
+        height: 22px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 50%;
+
+        background: var(--azul);
+        color: #fff;
+
+        font-size: .68rem;
+        font-weight: 700;
+
+        text-transform: uppercase;
+    }
+
+    /* teclado aberto: esconde a barra inferior para sobrar espaço */
+    body.teclado .nav-mobile {
+        display: none;
+    }
+}
     </style>
 </head>
 <body>
     <header>
-        <div class="logo">Crypher.IA</div>
+        <a href="home.php" class="logo">Crypher.IA</a>
+
         <nav>
             <a href="home.php">Home</a>
-            <a href="contato/conversa.php">Contato</a>
             <a href="painel_api.php">IA</a>
+            <a href="<?= $linkContato ?>">Contato</a>
         </nav>
 
-        <!-- menu hambúrguer (mobile) -->
-        <button type="button" class="menu-toggle" id="menuToggle" aria-label="Abrir menu" aria-controls="menuMobile" aria-expanded="false">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
+        <!-- Bolinha da conta (mesmo estilo da Home e da IA) -->
+        <div class="conta-menu">
+            <button type="button" class="conta-botao" id="conta-botao" title="Minha conta" aria-haspopup="true" aria-expanded="false">
+                <?= htmlspecialchars($inicialUsuario) ?>
+            </button>
+
+            <div class="conta-dropdown" id="conta-dropdown">
+                <a href="perfil.php"><i class="fa-regular fa-user"></i> Meu perfil</a>
+                <a href="logout.php"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sair</a>
+            </div>
+        </div>
     </header>
 
-    <nav class="menu-mobile" id="menuMobile" aria-label="Menu principal">
-        <a href="home.php">Home</a>
-        <a href="contato/conversa.php">Contato</a>
-        <a href="painel_api.php">IA</a>
-    </nav>
-
     <main>
-        <h1>Meu perfil</h1>
+        <div class="conteudo">
+            <h1>Meu perfil</h1>
 
-        <?php if ($sucesso): ?>
-            <div class="flash-success"><?php echo htmlspecialchars($sucesso); ?></div>
-        <?php endif; ?>
-        <?php if ($erro): ?>
-            <div class="flash-error"><?php echo htmlspecialchars($erro); ?></div>
-        <?php endif; ?>
+            <?php if ($sucesso): ?>
+                <div class="flash-success"><?php echo htmlspecialchars($sucesso); ?></div>
+            <?php endif; ?>
+            <?php if ($erro): ?>
+                <div class="flash-error"><?php echo htmlspecialchars($erro); ?></div>
+            <?php endif; ?>
 
-        <div class="abas">
-            <button type="button" class="aba-botao <?= $abaAtiva === 'dados' ? 'ativa' : '' ?>" data-aba="dados" onclick="mostrarAba('dados')">
-                Dados da conta
-            </button>
-            <button type="button" class="aba-botao <?= $abaAtiva === 'privacidade' ? 'ativa' : '' ?>" data-aba="privacidade" onclick="mostrarAba('privacidade')">
-                Privacidade e conversas
-            </button>
-        </div>
-
-        <!-- ===== Aba: Dados da conta ===== -->
-        <div id="aba-dados" class="aba-conteudo <?= $abaAtiva === 'dados' ? 'ativa' : '' ?>">
-            <div class="card">
-                <h2>Dados da conta</h2>
-                <p class="desc">Altere seu nome, e-mail ou senha. Informe sua senha atual pra confirmar.</p>
-
-                <form method="post" action="atulizar_perfil.php">
-                    <label for="nome">Nome</label>
-                    <input type="text" id="nome" name="nome" value="<?php echo htmlspecialchars($usuario['nome'] ?? ''); ?>" required>
-
-                    <label for="email_novo">E-mail</label>
-                    <input type="email" id="email_novo" name="email_novo" value="<?php echo htmlspecialchars($usuario['email'] ?? ''); ?>" required>
-
-                    <label for="senha_atual">Senha atual</label>
-                    <input type="password" id="senha_atual" name="senha_atual" placeholder="Necessária para salvar qualquer alteração" required>
-
-                    <div class="campo-senha-nova">
-                        <p class="desc">Quer trocar de senha? Preencha os dois campos abaixo (deixe em branco pra manter a senha atual).</p>
-
-                        <label for="nova_senha">Nova senha</label>
-                        <input type="password" id="nova_senha" name="nova_senha" placeholder="Deixe em branco para não alterar">
-
-                        <label for="confirmar_senha">Confirmar nova senha</label>
-                        <input type="password" id="confirmar_senha" name="confirmar_senha" placeholder="Repita a nova senha">
-                    </div>
-
-                    <button type="submit" class="btn-salvar">Salvar alterações</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- ===== Aba: Privacidade e conversas ===== -->
-        <div id="aba-privacidade" class="aba-conteudo <?= $abaAtiva === 'privacidade' ? 'ativa' : '' ?>">
-            <div class="card zona-perigo">
-                <h2>Apagar histórico do chat de análise</h2>
-                <p class="desc">Remove permanentemente todas as suas conversas com a IA na página de análise de código.</p>
-
-                <form method="post" action="apagar_dados.php" onsubmit="return confirm('Tem certeza que deseja apagar todo o histórico do chat de análise? Essa ação não pode ser desfeita.');">
-                    <input type="hidden" name="tipo" value="chat">
-                    <button type="submit" class="btn-apagar">Apagar histórico do chat</button>
-                </form>
+            <div class="abas">
+                <button type="button" class="aba-botao <?= $abaAtiva === 'dados' ? 'ativa' : '' ?>" data-aba="dados" onclick="mostrarAba('dados')">
+                    Dados da conta
+                </button>
+                <button type="button" class="aba-botao <?= $abaAtiva === 'privacidade' ? 'ativa' : '' ?>" data-aba="privacidade" onclick="mostrarAba('privacidade')">
+                    Privacidade e conversas
+                </button>
             </div>
 
-            <div class="card zona-perigo">
-                <h2>Apagar conversa com o suporte</h2>
-                <p class="desc">Remove permanentemente sua conversa na aba de contato com a equipe.</p>
+            <!-- ===== Aba: Dados da conta ===== -->
+            <div id="aba-dados" class="aba-conteudo <?= $abaAtiva === 'dados' ? 'ativa' : '' ?>">
+                <div class="card">
+                    <h2>Dados da conta</h2>
+                    <p class="desc">Altere seu nome, e-mail ou senha. Informe sua senha atual pra confirmar.</p>
 
-                <form method="post" action="apagar_dados.php" onsubmit="return confirm('Tem certeza que deseja apagar toda a conversa com o suporte? Essa ação não pode ser desfeita.');">
-                    <input type="hidden" name="tipo" value="conversa">
-                    <button type="submit" class="btn-apagar">Apagar conversa</button>
-                </form>
+                    <form method="post" action="atulizar_perfil.php">
+                        <label for="nome">Nome</label>
+                        <input type="text" id="nome" name="nome" value="<?php echo htmlspecialchars($usuario['nome'] ?? ''); ?>" required>
+
+                        <label for="email_novo">E-mail</label>
+                        <input type="email" id="email_novo" name="email_novo" value="<?php echo htmlspecialchars($usuario['email'] ?? ''); ?>" required>
+
+                        <label for="senha_atual">Senha atual</label>
+                        <input type="password" id="senha_atual" name="senha_atual" placeholder="Necessária para salvar qualquer alteração" required>
+
+                        <div class="campo-senha-nova">
+                            <p class="desc">Quer trocar de senha? Preencha os dois campos abaixo (deixe em branco pra manter a senha atual).</p>
+
+                            <label for="nova_senha">Nova senha</label>
+                            <input type="password" id="nova_senha" name="nova_senha" placeholder="Deixe em branco para não alterar">
+
+                            <label for="confirmar_senha">Confirmar nova senha</label>
+                            <input type="password" id="confirmar_senha" name="confirmar_senha" placeholder="Repita a nova senha">
+                        </div>
+
+                        <button type="submit" class="btn-salvar">Salvar alterações</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ===== Aba: Privacidade e conversas ===== -->
+            <div id="aba-privacidade" class="aba-conteudo <?= $abaAtiva === 'privacidade' ? 'ativa' : '' ?>">
+                <div class="card zona-perigo">
+                    <h2>Apagar histórico do chat de análise</h2>
+                    <p class="desc">Remove permanentemente todas as suas conversas com a IA na página de análise de código.</p>
+
+                    <form method="post" action="apagar_dados.php" onsubmit="return confirm('Tem certeza que deseja apagar todo o histórico do chat de análise? Essa ação não pode ser desfeita.');">
+                        <input type="hidden" name="tipo" value="chat">
+                        <button type="submit" class="btn-apagar">Apagar histórico do chat</button>
+                    </form>
+                </div>
+
+                <div class="card zona-perigo">
+                    <h2>Apagar conversa com o suporte</h2>
+                    <p class="desc">Remove permanentemente sua conversa na aba de contato com a equipe.</p>
+
+                    <form method="post" action="apagar_dados.php" onsubmit="return confirm('Tem certeza que deseja apagar toda a conversa com o suporte? Essa ação não pode ser desfeita.');">
+                        <input type="hidden" name="tipo" value="conversa">
+                        <button type="submit" class="btn-apagar">Apagar conversa</button>
+                    </form>
+                </div>
             </div>
         </div>
     </main>
 
+    <!-- Barra de navegação inferior (só aparece no celular) -->
+    <nav class="nav-mobile">
+        <a href="home.php">
+            <i class="fa-solid fa-house"></i>
+            <span>Home</span>
+        </a>
+        <a href="painel_api.php">
+            <i class="fa-solid fa-robot"></i>
+            <span>IA</span>
+        </a>
+        <a href="<?= $linkContato ?>">
+            <i class="fa-regular fa-comments"></i>
+            <span>Contato</span>
+        </a>
+        <a href="perfil.php" class="ativo">
+            <span class="nav-avatar"><?= htmlspecialchars($inicialUsuario) ?></span>
+            <span>Perfil</span>
+        </a>
+    </nav>
+
     <script>
-        /* ===== Menu hambúrguer (mobile) ===== */
+        /* ===== Bolinha da conta: abre ao clicar, fecha ao clicar fora ou com Esc ===== */
         (() => {
-            const btn  = document.getElementById('menuToggle');
-            const menu = document.getElementById('menuMobile');
-            if (!btn || !menu) return;
+            const botao    = document.getElementById('conta-botao');
+            const dropdown = document.getElementById('conta-dropdown');
+            if (!botao || !dropdown) return;
 
             const fechar = () => {
-                btn.classList.remove('aberto');
-                menu.classList.remove('aberto');
-                btn.setAttribute('aria-expanded', 'false');
+                dropdown.classList.remove('ativo');
+                botao.setAttribute('aria-expanded', 'false');
             };
 
-            btn.addEventListener('click', (e) => {
+            botao.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const aberto = menu.classList.toggle('aberto');
-                btn.classList.toggle('aberto', aberto);
-                btn.setAttribute('aria-expanded', String(aberto));
-            });
-
-            menu.addEventListener('click', (e) => {
-                if (e.target.closest('a')) fechar();
+                const aberto = dropdown.classList.toggle('ativo');
+                botao.setAttribute('aria-expanded', aberto ? 'true' : 'false');
             });
 
             document.addEventListener('click', (e) => {
-                if (!menu.contains(e.target) && !btn.contains(e.target)) fechar();
+                if (!dropdown.contains(e.target)) fechar();
             });
 
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') fechar();
             });
+        })();
 
-            window.addEventListener('resize', () => {
-                if (window.innerWidth > 640) fechar();
+        /* ===== Teclado do celular: acompanha a altura visível e esconde a barra inferior ===== */
+        (() => {
+            const ehMobile = () => window.innerWidth <= 768;
+
+            function ajustarAltura() {
+                if (window.visualViewport && ehMobile()) {
+                    document.body.style.height = window.visualViewport.height + 'px';
+                } else {
+                    document.body.style.height = '';
+                }
+            }
+
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', ajustarAltura);
+            }
+            window.addEventListener('resize', ajustarAltura);
+            ajustarAltura();
+
+            document.addEventListener('focusin', (e) => {
+                if (ehMobile() && e.target.matches('input')) document.body.classList.add('teclado');
+            });
+            document.addEventListener('focusout', () => {
+                document.body.classList.remove('teclado');
             });
         })();
-    </script>
 
-    <script>
+        /* ===== Abas ===== */
         function mostrarAba(nome) {
             document.querySelectorAll('.aba-conteudo').forEach(el => {
                 el.classList.toggle('ativa', el.id === 'aba-' + nome);
