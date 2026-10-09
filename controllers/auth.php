@@ -8,6 +8,18 @@ function ver_caractere_especial($nome){
 
 }
 function login( $email, $senha){
+    $email = trim((string) $email);
+    $senha = (string) $senha;
+
+    if ($email === '' && $senha === '') {
+        return 'Preencha o e-mail e a senha para entrar.';
+    }
+    if ($email === '') {
+        return 'Preencha o campo de e-mail.';
+    }
+    if ($senha === '') {
+        return 'Preencha o campo de senha.';
+    }
 
 require __DIR__ . '/../config/config.php';
 
@@ -23,7 +35,10 @@ require __DIR__ . '/../config/config.php';
     
 
     if ($usuario && password_verify($senha, $usuario['senha'])) {
-        $_SESSION['id'] = $usuario['id']; // ou 'id' se for esse o nome do campo
+        // novo ID de sessão a cada login: nunca reaproveita a sessão de outra pessoa
+        session_regenerate_id(true);
+        $_SESSION = [];
+        $_SESSION['id'] = $usuario['id'];
         header("Location:../public/home.php");
         exit;
     } elseif($senha && $email == !NULL) {
@@ -37,6 +52,26 @@ require __DIR__ . '/../config/config.php';
 
 function cadastrar( $nome, $email, $senha){
     require __DIR__ . '/../config/config.php';
+
+    $nome  = trim((string) $nome);
+    $email = trim((string) $email);
+    $senha = (string) $senha;
+
+    if ($nome === '' && $email === '' && $senha === '') {
+        return 'Preencha nome, e-mail e senha para se cadastrar.';
+    }
+    if ($nome === '') {
+        return 'Preencha o campo de nome.';
+    }
+    if ($email === '') {
+        return 'Preencha o campo de e-mail.';
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return 'Digite um e-mail válido.';
+    }
+    if ($senha === '') {
+        return 'Preencha o campo de senha.';
+    }
 
 
  

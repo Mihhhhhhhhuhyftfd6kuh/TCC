@@ -1001,9 +1001,6 @@ a {
 
                 <div class="hamb-dropdown" id="hamb-dropdown">
                     <a href="home.php"><i class="fa-solid fa-house"></i> Home</a>
-                    <a href="painel_api.php"><i class="fa-solid fa-robot"></i> IA</a>
-                    <a href="contato/conversa.php"><i class="fa-regular fa-comments"></i> Contato</a>
-                    <a href="home.php#sobre"><i class="fa-solid fa-circle-info"></i> Sobre nós</a>
                 </div>
             </div>
 
@@ -1046,16 +1043,16 @@ a {
                 <div class="aviso aviso-erro"><?= htmlspecialchars($erroCadastro) ?></div>
             <?php endif; ?>
 
-            <form method="post">
+            <form method="post" autocomplete="off" novalidate>
 
                 <label>Nome:</label>
                 <input type="text" name="nome" value="<?= htmlspecialchars($_POST['nome'] ?? '') ?>">
 
                 <label>E-mail:</label>
-                <input type="email" name="email" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
+                <input type="email" name="email" autocomplete="off" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
 
                 <label>Senha:</label>
-                <input type="password" name="senha">
+                <input type="password" name="senha" autocomplete="new-password">
 
                 <button type="submit" class="btn-cadastrar">
                     Cadastrar

@@ -1,9 +1,22 @@
 <?php
 session_start();
 
+// Página de login nunca pode ser guardada em cache (nem pelo navegador, nem por proxy do Render)
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+
 require __DIR__ . '/../config/config.php';
 require __DIR__ . '/../controllers/auth.php';
 
+// Abrir a tela de login começa sempre uma sessão limpa. Sem isso, uma sessão
+// antiga de outra pessoa (ex.: a amiga que testou no mesmo navegador/aparelho
+// e não clicou em "Sair") continuava ativa e o site aparecia logado na conta dela.
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && !empty($_SESSION['id'])) {
+    $_SESSION = [];
+    session_destroy();
+    session_start();
+}
 
 $erroLogin = null;
 
@@ -27,8 +40,7 @@ $cadastroOk = isset($_GET['cadastrado']) && $_GET['cadastrado'] === '1' && !$err
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-   <title>Cadastro - Crypher.IA</title>
+    <title>Login - Crypher.IA</title>
     <link rel="icon" type="image/x-icon" href="../assets/img/mascote_s_fundo.png">
 
 
@@ -1021,9 +1033,6 @@ a {
 
                 <div class="hamb-dropdown" id="hamb-dropdown">
                     <a href="home.php"><i class="fa-solid fa-house"></i> Home</a>
-                    <a href="painel_api.php"><i class="fa-solid fa-robot"></i> IA</a>
-                    <a href="contato/conversa.php"><i class="fa-regular fa-comments"></i> Contato</a>
-                    <a href="home.php#sobre"><i class="fa-solid fa-circle-info"></i> Sobre nós</a>
                 </div>
             </div>
 
@@ -1074,15 +1083,15 @@ a {
                 <div class="aviso aviso-erro"><?= htmlspecialchars($erroLogin) ?></div>
             <?php endif; ?>
 
-            <form method="post">
+            <form method="post" autocomplete="off" novalidate>
 
               
 
                 <label>E-mail:</label>
-                <input type="email" name="email">
+                <input type="email" name="email" autocomplete="off">
 
                 <label>Senha:</label>
-                <input type="password" name="senha">
+                <input type="password" name="senha" autocomplete="new-password">
 
                 <button type="submit" class="btn-cadastrar" >
                     Login

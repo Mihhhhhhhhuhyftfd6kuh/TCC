@@ -1717,14 +1717,9 @@ main {
 }
 
 /* =========================================================
-   PADRÃO DO SITE: bolinha da conta + barra inferior (mobile)
+   PADRÃO DO SITE: bolinha da conta (mobile)
    Fica depois das outras regras para sobrescrevê-las.
 ========================================================= */
-
-/* barra de navegação inferior: só existe no celular */
-.nav-mobile {
-    display: none;
-}
 
 @media (max-width: 768px) {
 
@@ -1775,73 +1770,6 @@ main {
         min-width: 180px;
     }
 
-    /* ---- barra de navegação inferior ---- */
-
-    .nav-mobile {
-        flex-shrink: 0;
-
-        display: flex;
-
-        padding-bottom: env(safe-area-inset-bottom);
-
-        background: #fff;
-
-        border-top: 1px solid #e5e5ee;
-    }
-
-    .nav-mobile a {
-        flex: 1;
-
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-
-        gap: 3px;
-
-        padding: 8px 0 7px;
-
-        color: #9a9ab0;
-
-        text-decoration: none;
-
-        font-size: .66rem;
-        font-weight: 600;
-
-        transition: color .2s ease;
-    }
-
-    .nav-mobile a i {
-        font-size: 1.12rem;
-    }
-
-    .nav-mobile a.ativo {
-        color: #4348D9;
-    }
-
-    /* bolinha com a inicial na aba Perfil */
-    .nav-avatar {
-        width: 22px;
-        height: 22px;
-
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        border-radius: 50%;
-
-        background: #4348D9;
-        color: #fff;
-
-        font-size: .68rem;
-        font-weight: 700;
-
-        text-transform: uppercase;
-    }
-
-    /* teclado aberto: esconde a barra inferior para sobrar espaço */
-    body.teclado .nav-mobile {
-        display: none;
-    }
 }
 
 /* =========================================================
@@ -2224,26 +2152,6 @@ main {
         </div>
     </main>
 
-    <!-- Barra de navegação inferior (só aparece no celular) -->
-    <nav class="nav-mobile">
-        <a href="home.php">
-            <i class="fa-solid fa-house"></i>
-            <span>Home</span>
-        </a>
-        <a href="painel_api.php" class="ativo">
-            <i class="fa-solid fa-robot"></i>
-            <span>IA</span>
-        </a>
-        <a href="<?= $linkContato ?>">
-            <i class="fa-regular fa-comments"></i>
-            <span>Contato</span>
-        </a>
-        <a href="perfil.php">
-            <span class="nav-avatar"><?= htmlspecialchars($inicialUsuario) ?></span>
-            <span>Perfil</span>
-        </a>
-    </nav>
-
     <script>
     (() => {
         const chatCard = document.querySelector('.chat-card');
@@ -2522,13 +2430,6 @@ main {
     window.addEventListener('resize', ajustarAltura);
     ajustarAltura();
 
-    // Esconde a barra inferior enquanto o teclado está aberto
-    textarea.addEventListener('focus', () => {
-        if (ehMobile()) document.body.classList.add('teclado');
-    });
-    textarea.addEventListener('blur', () => {
-        document.body.classList.remove('teclado');
-    });
 })();
 </script>
 <script>

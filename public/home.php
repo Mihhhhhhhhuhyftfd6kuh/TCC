@@ -99,9 +99,6 @@ nav a:hover{ opacity:.7; }
 .conta-dropdown a:hover{ background:#f2f2f2; }
 .conta-dropdown .so-mobile{ display:none; }
 
-/* barra de navegação inferior: só existe no celular */
-.nav-mobile{ display:none; }
-
 .hero{
     position:relative; z-index:2;
     min-height:100vh;
@@ -571,7 +568,7 @@ a { text-decoration:none; color:inherit; }
 
 
 /* =========================================================
-   MOBILE: header (logo + bolinha) e barra de navegação inferior
+   MOBILE: header (logo + bolinha)
 ========================================================= */
 
 .equipe-indicadores { display:none; }
@@ -595,7 +592,7 @@ a { text-decoration:none; color:inherit; }
 
     .logo { font-size:1.6rem; flex-shrink:0; }
 
-    /* os links viram a barra de navegação inferior */
+    /* os links ficam no menu hambúrguer */
     header > nav { display:none; }
 
     header .conta-menu,
@@ -606,42 +603,6 @@ a { text-decoration:none; color:inherit; }
     .conta-botao { width:40px; height:40px; font-size:1rem; }
     .conta-botao:hover { transform:none; }
     .conta-dropdown { top:calc(100% + 8px); }
-
-    /* ---------- barra de navegação inferior ---------- */
-
-    body { padding-bottom:calc(62px + env(safe-area-inset-bottom)); }
-
-    .nav-mobile {
-        position:fixed; left:0; right:0; bottom:0;
-        z-index:150;
-        display:flex;
-        padding-bottom:env(safe-area-inset-bottom);
-        background:#fff;
-        border-top:1px solid #e5e5ee;
-        box-shadow:0 -4px 16px rgba(0,0,0,.08);
-    }
-
-    .nav-mobile a {
-        flex:1;
-        display:flex; flex-direction:column; align-items:center;
-        gap:3px;
-        padding:8px 0 7px;
-        color:#9a9ab0;
-        font-size:.66rem; font-weight:600;
-        transition:color .2s ease;
-    }
-
-    .nav-mobile a i { font-size:1.12rem; }
-    .nav-mobile a.ativo { color:#4348D9; }
-
-    .nav-avatar {
-        width:22px; height:22px;
-        display:flex; align-items:center; justify-content:center;
-        border-radius:50%;
-        background:#4348D9; color:#fff;
-        font-size:.68rem; font-weight:700;
-        text-transform:uppercase;
-    }
 
     /* itens do menu da bolinha que só aparecem no celular */
     .conta-dropdown .so-mobile { display:flex; }
@@ -903,33 +864,6 @@ a { text-decoration:none; color:inherit; }
     </div>
 
 </header>
-
-<!-- Barra de navegação inferior (só aparece no celular) -->
-<nav class="nav-mobile" aria-label="Menu principal">
-    <a href="home.php" class="ativo">
-        <i class="fa-solid fa-house"></i>
-        <span>Home</span>
-    </a>
-    <a href="painel_api.php" onclick="Verlogar('painel_api.php'); return false;">
-        <i class="fa-solid fa-robot"></i>
-        <span>IA</span>
-    </a>
-    <a href="contato/conversa.php" onclick="Verlogar('contato/conversa.php'); return false;">
-        <i class="fa-regular fa-comments"></i>
-        <span>Contato</span>
-    </a>
-    <?php if ($usuarioLogado): ?>
-        <a href="perfil.php">
-            <span class="nav-avatar"><?= htmlspecialchars($inicialUsuario) ?></span>
-            <span>Perfil</span>
-        </a>
-    <?php else: ?>
-        <a href="login.php">
-            <i class="fa-regular fa-user"></i>
-            <span>Entrar</span>
-        </a>
-    <?php endif; ?>
-</nav>
 
 <div class="modal-overlay" id="modalLogin">
     <div class="modal-caixa">

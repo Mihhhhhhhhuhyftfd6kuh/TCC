@@ -53,8 +53,7 @@ if (!in_array($abaAtiva, ['dados', 'privacidade'], true)) {
 /* =========================================
    CRYPHER.IA - MEU PERFIL
    Mesmo padrão da página da IA: header azul com
-   bolinha da conta e, no celular, barra de
-   navegação inferior
+   bolinha da conta e hambúrguer no celular
 ========================================= */
 
 * {
@@ -104,8 +103,8 @@ body {
 
 header {
     width: 100%;
-    height: 96px;
-    min-height: 96px;
+    height: 120px;
+    min-height: 120px;
     flex-shrink: 0;
 
     padding: 0 80px;
@@ -146,7 +145,7 @@ header nav {
     display: flex;
     align-items: center;
 
-    gap: 12px;
+    gap: 16px;
 }
 
 header nav a {
@@ -154,10 +153,10 @@ header nav a {
 
     text-decoration: none;
 
-    font-size: .9rem;
+    font-size: 1rem;
     font-weight: 600;
 
-    padding: 10px 17px;
+    padding: 12px 20px;
 
     border-radius: 999px;
 
@@ -183,8 +182,8 @@ header nav a:hover {
 }
 
 .conta-botao {
-    width: 46px;
-    height: 46px;
+    width: 52px;
+    height: 52px;
 
     display: flex;
     align-items: center;
@@ -373,13 +372,6 @@ header nav a:hover {
 
 .hamb-dropdown a:hover {
     background: #f2f2f2;
-}
-
-
-/* barra de navegação inferior: só existe no celular */
-
-.nav-mobile {
-    display: none;
 }
 
 
@@ -666,7 +658,7 @@ button {
 
 
 /* =========================================
-   MOBILE (app com barra de navegação inferior)
+   MOBILE
 ========================================= */
 
 @media (max-width: 768px) {
@@ -756,73 +748,6 @@ button {
         width: 100%;
     }
 
-    /* ---- barra de navegação inferior ---- */
-
-    .nav-mobile {
-        flex-shrink: 0;
-
-        display: flex;
-
-        padding-bottom: env(safe-area-inset-bottom);
-
-        background: #fff;
-
-        border-top: 1px solid var(--borda);
-    }
-
-    .nav-mobile a {
-        flex: 1;
-
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-
-        gap: 3px;
-
-        padding: 8px 0 7px;
-
-        color: #9a9ab0;
-
-        text-decoration: none;
-
-        font-size: .66rem;
-        font-weight: 600;
-
-        transition: color .2s ease;
-    }
-
-    .nav-mobile a i {
-        font-size: 1.12rem;
-    }
-
-    .nav-mobile a.ativo {
-        color: var(--azul);
-    }
-
-    /* bolinha com a inicial na aba Perfil */
-    .nav-avatar {
-        width: 22px;
-        height: 22px;
-
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        border-radius: 50%;
-
-        background: var(--azul);
-        color: #fff;
-
-        font-size: .68rem;
-        font-weight: 700;
-
-        text-transform: uppercase;
-    }
-
-    /* teclado aberto: esconde a barra inferior para sobrar espaço */
-    body.teclado .nav-mobile {
-        display: none;
-    }
 }
     </style>
 </head>
@@ -941,26 +866,6 @@ button {
         </div>
     </main>
 
-    <!-- Barra de navegação inferior (só aparece no celular) -->
-    <nav class="nav-mobile">
-        <a href="home.php">
-            <i class="fa-solid fa-house"></i>
-            <span>Home</span>
-        </a>
-        <a href="painel_api.php">
-            <i class="fa-solid fa-robot"></i>
-            <span>IA</span>
-        </a>
-        <a href="<?= $linkContato ?>">
-            <i class="fa-regular fa-comments"></i>
-            <span>Contato</span>
-        </a>
-        <a href="perfil.php" class="ativo">
-            <span class="nav-avatar"><?= htmlspecialchars($inicialUsuario) ?></span>
-            <span>Perfil</span>
-        </a>
-    </nav>
-
     <script>
         /* ===== Bolinha da conta: abre ao clicar, fecha ao clicar fora ou com Esc ===== */
         (() => {
@@ -1050,12 +955,6 @@ button {
             window.addEventListener('resize', ajustarAltura);
             ajustarAltura();
 
-            document.addEventListener('focusin', (e) => {
-                if (ehMobile() && e.target.matches('input')) document.body.classList.add('teclado');
-            });
-            document.addEventListener('focusout', () => {
-                document.body.classList.remove('teclado');
-            });
         })();
 
         /* ===== Abas ===== */
