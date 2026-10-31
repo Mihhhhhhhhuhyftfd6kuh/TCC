@@ -36,17 +36,14 @@ $cadastroOk = isset($_GET['cadastrado']) && $_GET['cadastrado'] === '1' && !$err
 
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Crypher.IA</title>
+    <title>Login | Crypher.IA</title>
     <link rel="icon" type="image/x-icon" href="../assets/img/mascote_s_fundo.png">
 
-
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
@@ -56,6 +53,15 @@ $cadastroOk = isset($_GET['cadastrado']) && $_GET['cadastrado'] === '1' && !$err
     padding: 0;
     box-sizing: border-box;
     font-family: 'Poppins', sans-serif;
+}
+
+:root {
+    --azul: #4348D9;
+    --azul-escuro: #3a3fc4;
+    --amarelo: #F3BE27;
+    --texto: #1f2033;
+    --texto-suave: #6b6d85;
+    --borda: #E2E3F0;
 }
 
 html {
@@ -69,25 +75,14 @@ body {
     min-height: 100svh;
 
     overflow-x: hidden;
-    overflow-y: auto;
 
     background: #fff;
+    color: var(--texto);
 }
 
-
-/* =========================================
-   CHUVINHA
-========================================= */
-
-#rainCanvas {
-    position: absolute;
-    inset: 0;
-
-    width: 100%;
-    height: 100%;
-
-    z-index: 1;
-    pointer-events: none;
+a {
+    text-decoration: none;
+    color: inherit;
 }
 
 
@@ -96,9 +91,6 @@ body {
 ========================================= */
 
 .container {
-    position: relative;
-    z-index: 2;
-
     display: flex;
 
     width: 100%;
@@ -114,55 +106,91 @@ body {
 .left-panel {
     position: relative;
 
-    width: 40%;
+    width: 45%;
     min-height: 100vh;
-
-    background: #4348D9;
-    color: #fff;
 
     display: flex;
     flex-direction: column;
 
-    padding: 30px;
+    padding: 40px 50px;
+
+    background: linear-gradient(160deg, var(--azul) 0%, var(--azul-escuro) 100%);
+    color: #fff;
 
     overflow: hidden;
 }
 
+/* brilho amarelo decorativo */
 
-/* conteúdo acima da chuvinha */
+.left-panel::before {
+    content: "";
+
+    position: absolute;
+
+    width: 380px;
+    height: 380px;
+
+    right: -140px;
+    bottom: -140px;
+
+    border-radius: 50%;
+
+    background: radial-gradient(circle, rgba(243, 190, 39, .38) 0%, rgba(243, 190, 39, 0) 70%);
+
+    pointer-events: none;
+}
+
+/* círculo de contorno decorativo */
+
+.left-panel::after {
+    content: "";
+
+    position: absolute;
+
+    width: 260px;
+    height: 260px;
+
+    left: -110px;
+    top: 38%;
+
+    border-radius: 50%;
+
+    border: 2px solid rgba(255, 255, 255, .12);
+
+    pointer-events: none;
+}
+
+#rainCanvas {
+    position: absolute;
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+    z-index: 1;
+    pointer-events: none;
+}
 
 .logo,
 .welcome,
-.btn-login,
-.btn-cadastrar {
+.header-direita {
     position: relative;
     z-index: 2;
 }
 
-
-/* =========================================
-   LOGO
-========================================= */
-
 .logo {
-    font-size: 2.8rem;
+    font-size: 2.2rem;
     font-weight: 700;
-
     line-height: 1;
-
-    white-space: nowrap;
 }
 
-.logo-sub {
-    font-size: 1.1rem;
-
-    margin-left: 130px;
-    margin-top: -10px;
+.header-direita {
+    display: none;
 }
 
 
 /* =========================================
-   ÁREA DE BOAS-VINDAS
+   BOAS-VINDAS
 ========================================= */
 
 .welcome {
@@ -173,61 +201,119 @@ body {
 
     justify-content: center;
     align-items: flex-start;
+
+    max-width: 440px;
+}
+
+.selo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 7px 16px;
+    margin-bottom: 22px;
+
+    border-radius: 999px;
+
+    background: rgba(255, 255, 255, .14);
+    border: 1px solid rgba(255, 255, 255, .22);
+
+    font-size: .8rem;
+    font-weight: 500;
+    letter-spacing: .3px;
+}
+
+.selo i {
+    color: var(--amarelo);
 }
 
 .welcome h2 {
-    font-size: 2.2rem;
-    line-height: 1.2;
+    font-size: 2.7rem;
+    font-weight: 700;
+    line-height: 1.15;
 
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
-.welcome p {
-    font-size: 1.1rem;
+.welcome h2 span {
+    color: var(--amarelo);
+}
+
+.welcome > p {
+    font-size: 1.02rem;
+    font-weight: 300;
+    line-height: 1.6;
+
+    opacity: .9;
 
     margin-bottom: 30px;
 }
 
+.destaques {
+    list-style: none;
 
-/* =========================================
-   BOTÕES
-========================================= */
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 
-.btn-login,
-.btn-cadastrar {
-    width: 180px;
+    margin-bottom: 36px;
+}
+
+.destaques li {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+
+    font-size: .95rem;
+    font-weight: 400;
+}
+
+.destaques li i {
+    width: 38px;
+    height: 38px;
+
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background: rgba(255, 255, 255, .14);
+    color: var(--amarelo);
+
+    font-size: .95rem;
+}
+
+.btn-login {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
     height: 52px;
+    padding: 0 34px;
 
-    border: none;
     border-radius: 999px;
 
-    background: #F3BE27;
+    background: var(--amarelo);
     color: #222;
 
-    font-size: 1.1rem;
+    font-size: 1.02rem;
     font-weight: 700;
 
-    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(243, 190, 39, .30);
 
     transition:
         transform .3s ease,
-        box-shadow .3s ease,
-        background .3s ease;
-
-    box-shadow:
-        0 8px 18px rgba(243, 190, 39, .30);
+        box-shadow .3s ease;
 }
 
-.btn-login:hover,
-.btn-cadastrar:hover {
+.btn-login:hover {
     transform: translateY(-3px) scale(1.03);
 
-    box-shadow:
-        0 12px 24px rgba(243, 190, 39, .45);
-}
-
-.btn-cadastrar {
-    margin-left: 90px;
+    box-shadow: 0 12px 24px rgba(243, 190, 39, .45);
 }
 
 
@@ -236,141 +322,59 @@ body {
 ========================================= */
 
 .right-panel {
-    width: 60%;
+    width: 55%;
     min-height: 100vh;
 
-    background: #fff;
-
     display: flex;
-    flex-direction: column;
-
-    justify-content: center;
     align-items: center;
+    justify-content: center;
 
     padding: 40px;
+
+    background:
+        radial-gradient(circle at 100% 0%, rgba(67, 72, 217, .07) 0%, rgba(67, 72, 217, 0) 45%),
+        #fff;
 }
 
-
-/* =========================================
-   TÍTULO
-========================================= */
-
-.right-panel h1 {
+.form-area {
     width: 100%;
-    max-width: 600px;
-
-    font-size: 3rem;
-    line-height: 1.1;
-
-    margin-bottom: 8px;
-
-    color: #111;
-
-    text-align: center;
+    max-width: 420px;
 }
 
-.right-panel p {
-    color: #555;
-
-    margin-bottom: 25px;
-
-    text-align: center;
+.form-topo {
+    margin-bottom: 30px;
 }
 
+.form-topo h1 {
+    font-size: 2.3rem;
+    font-weight: 700;
+    line-height: 1.15;
 
-/* =========================================
-   CARTÃO DO FORMULÁRIO
-========================================= */
-
-.form-card {
-    position: relative;
-    z-index: 2;
-
-    width: min(420px, 100%);
-
-    padding: 30px;
-
-    border-radius: 16px;
-
-    background: #4348D9;
-
-    box-shadow:
-        0 10px 25px rgba(0, 0, 0, .15);
-}
-
-
-/* =========================================
-   FORM
-========================================= */
-
-.form-card form {
-    display: flex;
-    flex-direction: column;
-
-    width: 100%;
-}
-
-
-/* =========================================
-   LABEL
-========================================= */
-
-.form-card label {
-    color: #000;
-
-    font-weight: 600;
+    color: var(--texto);
 
     margin-bottom: 8px;
 }
 
+.form-topo h1::after {
+    content: "";
 
-/* =========================================
-   INPUT
-========================================= */
+    display: block;
 
-.form-card input {
-    width: 100%;
-    height: 45px;
+    width: 54px;
+    height: 5px;
 
-    border: none;
-    outline: none;
+    margin-top: 12px;
 
-    border-radius: 10px;
+    border-radius: 999px;
 
-    padding: 0 15px;
-
-    margin-bottom: 18px;
-
-    font-size: 1rem;
-
-    background: #E4E5F0;   /* cinza levemente azulado, combina com o azul do site */
-    color: #202020;
-
-    transition:
-        box-shadow .2s ease,
-        transform .2s ease;
+    background: var(--amarelo);
 }
 
-.form-card input::placeholder {
-    color: #8b8ca3;
-}
+.form-topo p {
+    margin-top: 14px;
 
-.form-card input:focus {
-    background: #ECEDF6;
-    box-shadow:
-        0 0 0 3px rgba(243, 190, 39, .55);
-}
-
-
-/* =========================================
-   BOTÃO DO FORMULÁRIO
-========================================= */
-
-.form-card .btn-cadastrar {
-    align-self: center;
-
-    margin-left: 0;
-    margin-top: 5px;
+    font-size: .98rem;
+    color: var(--texto-suave);
 }
 
 
@@ -383,524 +387,210 @@ body {
     align-items: flex-start;
     gap: 10px;
 
-    width: 100%;
+    padding: 13px 16px;
+    margin-bottom: 22px;
 
-    padding: 12px 16px;
-    margin-bottom: 18px;
-
-    border-radius: 10px;
+    border-radius: 12px;
 
     font-size: .9rem;
     line-height: 1.4;
 
-    transition: opacity .5s ease, margin .5s ease, padding .5s ease, max-height .5s ease;
     opacity: 1;
     max-height: 200px;
     overflow: hidden;
+
+    transition: opacity .5s ease, margin .5s ease, padding .5s ease, max-height .5s ease;
+}
+
+.aviso i {
+    margin-top: 2px;
 }
 
 .aviso-erro {
-    background: rgba(220, 53, 69, .12);
-    color: #ffd7da;
-    border: 1px solid rgba(220, 53, 69, .55);
+    background: #fdecee;
+    color: #b02a37;
+    border: 1px solid #f5c2c7;
 }
 
 .aviso-sucesso {
-    background: rgba(40, 167, 69, .15);
-    color: #d7f5df;
-    border: 1px solid rgba(40, 167, 69, .55);
+    background: #e8f6ed;
+    color: #1d7a42;
+    border: 1px solid #b7e2c5;
 }
 
 
 /* =========================================
-   LINKS
+   CAMPOS
 ========================================= */
 
-a {
-    text-decoration: none;
-    color: inherit;
+.campo {
+    margin-bottom: 20px;
 }
 
-
-/* =========================================
-   TABLET
-========================================= */
-
-@media (max-width: 900px) {
-
-    .container {
-        flex-direction: column;
-
-        min-height: 100svh;
-    }
-
-    /* AZUL */
-
-    .left-panel {
-        width: 100%;
-        min-height: 42svh;
-        height: auto;
-
-        padding: 30px 40px;
-    }
-
-    .logo {
-        font-size: 2.5rem;
-    }
-
-    .logo-sub {
-        margin-left: 0;
-    }
-
-    .welcome {
-        justify-content: center;
-    }
-
-    .welcome h2 {
-        font-size: 2.4rem;
-    }
-
-
-    /* BRANCO */
-
-    .right-panel {
-        width: 100%;
-
-        min-height: 58svh;
-        height: auto;
-
-        padding: 45px 30px;
-    }
-
-    .right-panel h1 {
-        font-size: 2.7rem;
-    }
-
-    .form-card {
-        width: min(420px, 100%);
-    }
-
-    .btn-cadastrar {
-        margin-left: 0;
-    }
-}
-
-
-/* =========================================
-   CELULAR
-========================================= */
-
-@media (max-width: 600px) {
-
-    body {
-        overflow-x: hidden;
-    }
-
-    .container {
-        width: 100%;
-
-        display: flex;
-        flex-direction: column;
-    }
-
-
-    /* ================================
-       PAINEL AZUL
-    ================================= */
-
-    .left-panel {
-        width: 100%;
-
-        min-height: 43svh;
-
-        padding:
-            28px
-            24px
-            35px;
-
-        justify-content: flex-start;
-    }
-
-
-    /* LOGO */
-
-    .logo {
-        font-size: 2.8rem;
-
-        text-align: left;
-
-        line-height: 1;
-    }
-
-
-    /* BOAS-VINDAS */
-
-    .welcome {
-        width: 100%;
-
-        align-items: flex-start;
-
-        justify-content: center;
-    }
-
-    .welcome h2 {
-        width: 100%;
-
-        font-size: clamp(2rem, 8vw, 2.6rem);
-
-        line-height: 1.15;
-
-        margin-bottom: 18px;
-    }
-
-    .welcome p {
-        font-size: 1.05rem;
-
-        margin-bottom: 25px;
-    }
-
-
-    /* BOTÃO AZUL */
-
-    .left-panel .btn-login,
-    .left-panel .btn-cadastrar {
-        width: 180px;
-
-        margin-left: 0;
-
-        height: 52px;
-    }
-
-
-    /* ================================
-       PAINEL BRANCO
-    ================================= */
-
-    .right-panel {
-        width: 100%;
-
-        min-height: 57svh;
-
-        padding:
-            38px
-            20px
-            45px;
-
-        justify-content: flex-start;
-    }
-
-
-    /* TÍTULO */
-
-   .right-panel h1 {
-    width: 100%;
-    max-width: 600px;
-
-    font-size: 2.5rem;
-    line-height: 1.2;
-
-    font-weight: 600;
+.campo label {
+    display: block;
 
     margin-bottom: 8px;
 
-    color: #222;
+    font-size: .85rem;
+    font-weight: 600;
 
-    text-align: center;
+    color: var(--texto);
 }
 
-    .right-panel p {
-        width: 100%;
-
-        font-size: .95rem;
-
-        margin-bottom: 20px;
-    }
-
-
-    /* FORMULÁRIO */
-
-    .form-card {
-        width: 100%;
-
-        max-width: 420px;
-
-        padding: 25px 20px;
-
-        border-radius: 16px;
-    }
-
-
-    .form-card label {
-        font-size: .95rem;
-
-        margin-bottom: 7px;
-    }
-
-
-    .form-card input {
-        width: 100%;
-
-        height: 48px;
-
-        margin-bottom: 17px;
-
-        font-size: .95rem;
-    }
-
-
-    /* BOTÃO FORMULÁRIO */
-
-    .form-card .btn-cadastrar {
-        width: 180px;
-
-        margin-left: auto;
-        margin-right: auto;
-
-        height: 52px;
-    }
+.campo-input {
+    position: relative;
 }
 
+.campo-input > i.icone {
+    position: absolute;
 
-/* =========================================
-   CELULAR PEQUENO
-========================================= */
+    top: 50%;
+    left: 17px;
 
-@media (max-width: 400px) {
+    transform: translateY(-50%);
 
-    .left-panel {
-        min-height: 45svh;
+    color: #9a9cb5;
+    font-size: .95rem;
 
-        padding:
-            25px
-            20px
-            30px;
-    }
+    pointer-events: none;
 
-    .logo {
-        font-size: 2.45rem;
-    }
-
-    .welcome h2 {
-        font-size: 2rem;
-    }
-
-    .welcome p {
-        font-size: .95rem;
-    }
-
-    .left-panel .btn-login,
-    .left-panel .btn-cadastrar {
-        width: 165px;
-        height: 50px;
-
-        font-size: 1rem;
-    }
-
-
-    .right-panel {
-        min-height: 60svh;
-
-        padding:
-            32px
-            15px
-            40px;
-    }
-
-    .right-panel h1 {
-        font-size: 1.95rem;
-    }
-
-    .right-panel p {
-        font-size: .9rem;
-    }
-
-    .form-card {
-        padding: 22px 16px;
-    }
-
-    .form-card input {
-        height: 46px;
-    }
-
-    .form-card .btn-cadastrar {
-        width: 165px;
-    }
+    transition: color .2s ease;
 }
 
+.campo-input input {
+    width: 100%;
+    height: 52px;
 
-/* =========================================
-   TELAS MUITO BAIXAS
-========================================= */
+    padding: 0 16px 0 46px;
 
-@media (max-height: 650px) and (max-width: 600px) {
+    border: 1.5px solid var(--borda);
+    border-radius: 14px;
 
-    .left-panel {
-        min-height: 380px;
-    }
+    outline: none;
 
-    .right-panel {
-        min-height: 430px;
-    }
-
-    .welcome h2 {
-        font-size: 1.9rem;
-        margin-bottom: 12px;
-    }
-
-    .welcome p {
-        margin-bottom: 18px;
-    }
-
-    .right-panel {
-        padding-top: 30px;
-        padding-bottom: 35px;
-    }
-}
-
-/* botão de troca de tela no topo (só aparece no celular) */
-.logo-link {
-    color: inherit;
-    text-decoration: none;
-}
-
-.topo-acao {
-    display: none;
-}
-
-/* =========================================================
-   LOGIN / CADASTRO — MOBILE
-   Painel azul vira uma barra no topo (logo + botão) e
-   o formulário ocupa o resto da tela.
-   Fica no fim do <style> para sobrescrever as regras acima.
-========================================================= */
-
-@media (max-width: 900px) {
-
-    /* botão amarelo no canto direito da barra do topo */
-    .topo-acao {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-
-        height: 42px;
-        padding: 0 20px;
-
-        border-radius: 999px;
-
-        background: #F3BE27;
-        color: #222;
-
-        text-decoration: none;
-
-        font-size: .9rem;
-        font-weight: 700;
-
-        box-shadow: 0 6px 14px rgba(243, 190, 39, .30);
-    }
-
-    .container {
-        flex-direction: column;
-        min-height: 100svh;
-    }
-
-    /* barra azul do topo */
-
-    .left-panel {
-        width: 100%;
-        height: 68px;
-        min-height: 68px;
-
-        padding: 0 20px;
-
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    .logo {
-        font-size: 1.7rem;
-    }
-
-    /* o botão grande de trocar de tela agora está no menu */
-    .welcome {
-        display: none;
-    }
-
-    /* formulário */
-
-    .right-panel {
-        width: 100%;
-        min-height: calc(100svh - 68px);
-
-        padding: 32px 20px 40px;
-
-        justify-content: center;
-    }
-
-    .right-panel h1 {
-        font-size: clamp(1.8rem, 8vw, 2.4rem);
-        line-height: 1.15;
-
-        overflow-wrap: break-word;
-    }
-
-    .right-panel p {
-        font-size: .95rem;
-        margin-bottom: 20px;
-    }
-
-    .form-card {
-        width: 100%;
-        max-width: 420px;
-
-        padding: 24px 20px;
-    }
-
-    .form-card label {
-        font-size: .95rem;
-        color: #fff;
-    }
+    background: #F8F8FC;
+    color: var(--texto);
 
     /* 16px evita o zoom automático do iPhone ao focar no campo */
-    .form-card input {
-        height: 48px;
-        font-size: 16px;
-    }
+    font-size: 16px;
 
-    .form-card .btn-cadastrar {
-        width: 100%;
-        max-width: 260px;
-        height: 52px;
-    }
+    transition:
+        border-color .2s ease,
+        box-shadow .2s ease,
+        background .2s ease;
 }
 
-@media (max-width: 400px) {
-
-    .left-panel {
-        padding: 0 16px;
-    }
-
-    .logo {
-        font-size: 1.5rem;
-    }
-
-    .right-panel {
-        padding: 26px 14px 36px;
-    }
-
-    .form-card {
-        padding: 22px 16px;
-    }
+.campo-input input::placeholder {
+    color: #a9abc0;
 }
-/* =========================================================
-   MENU HAMBÚRGUER (só no celular) — mesmo padrão da Home
-   Fica ao lado do botão amarelo, na barra azul do topo.
-   O ícone vira X quando o menu está aberto.
-========================================================= */
 
-.header-direita {
-    display: none;
+.campo-input input:focus {
+    background: #fff;
+    border-color: var(--azul);
+    box-shadow: 0 0 0 4px rgba(67, 72, 217, .12);
 }
+
+.campo-input:focus-within > i.icone {
+    color: var(--azul);
+}
+
+.campo-senha input {
+    padding-right: 52px;
+}
+
+.ver-senha {
+    position: absolute;
+
+    top: 50%;
+    right: 7px;
+
+    transform: translateY(-50%);
+
+    width: 38px;
+    height: 38px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+    border-radius: 11px;
+
+    background: transparent;
+    color: #9a9cb5;
+
+    cursor: pointer;
+
+    transition: color .2s ease, background .2s ease;
+}
+
+.ver-senha:hover {
+    color: var(--azul);
+    background: rgba(67, 72, 217, .08);
+}
+
+
+/* =========================================
+   BOTÃO
+========================================= */
+
+.btn-entrar {
+    width: 100%;
+    height: 54px;
+
+    margin-top: 8px;
+
+    border: none;
+    border-radius: 999px;
+
+    background: var(--amarelo);
+    color: #222;
+
+    font-size: 1.08rem;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    box-shadow: 0 8px 18px rgba(243, 190, 39, .30);
+
+    transition:
+        transform .3s ease,
+        box-shadow .3s ease;
+}
+
+.btn-entrar:hover {
+    transform: translateY(-3px);
+
+    box-shadow: 0 12px 24px rgba(243, 190, 39, .45);
+}
+
+.btn-entrar:active {
+    transform: translateY(0);
+}
+
+.form-rodape {
+    margin-top: 24px;
+
+    text-align: center;
+
+    font-size: .9rem;
+    color: var(--texto-suave);
+}
+
+.form-rodape a {
+    color: var(--azul);
+    font-weight: 600;
+}
+
+.form-rodape a:hover {
+    text-decoration: underline;
+}
+
+
+/* =========================================
+   MENU HAMBÚRGUER (só no celular)
+========================================= */
 
 .menu-hamb {
     position: relative;
@@ -961,7 +651,6 @@ a {
 .hamb-dropdown a {
     display: flex;
     align-items: center;
-
     gap: 10px;
 
     padding: 13px 20px;
@@ -971,9 +660,7 @@ a {
     font-size: .9rem;
     font-weight: 500;
 
-    text-decoration: none;
-
-    transition: .2s ease;
+    transition: background .2s ease;
 }
 
 .hamb-dropdown a i {
@@ -981,50 +668,130 @@ a {
 
     text-align: center;
 
-    color: #4348D9;
+    color: var(--azul);
 }
 
 .hamb-dropdown a:hover {
     background: #f2f2f2;
 }
 
+.topo-acao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    height: 40px;
+    padding: 0 20px;
+
+    border-radius: 999px;
+
+    background: var(--amarelo);
+    color: #222;
+
+    font-size: .9rem;
+    font-weight: 700;
+
+    box-shadow: 0 6px 14px rgba(243, 190, 39, .30);
+}
+
+
+/* =========================================
+   TABLET / CELULAR (barra azul no topo)
+========================================= */
+
 @media (max-width: 900px) {
 
-    .header-direita {
-        position: relative;
-        z-index: 3;
+    .container {
+        flex-direction: column;
+    }
 
+    .left-panel {
+        width: 100%;
+        height: 68px;
+        min-height: 68px;
+
+        padding: 0 20px;
+
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+
+        /* o menu aberto não pode ser cortado */
+        overflow: visible;
+        z-index: 20;
+
+        background: var(--azul);
+    }
+
+    .left-panel::before,
+    .left-panel::after {
+        display: none;
+    }
+
+    .logo {
+        font-size: 1.7rem;
+    }
+
+    .welcome {
+        display: none;
+    }
+
+    .header-direita {
         display: flex;
         align-items: center;
-
         gap: 10px;
     }
 
-    /* a barra do topo não pode cortar o menu aberto */
+    .right-panel {
+        width: 100%;
+        min-height: calc(100svh - 68px);
+
+        padding: 34px 22px 44px;
+
+        align-items: flex-start;
+    }
+
+    .form-area {
+        margin: 0 auto;
+    }
+
+    .form-topo h1 {
+        font-size: clamp(1.9rem, 8vw, 2.4rem);
+    }
+}
+
+@media (max-width: 400px) {
+
     .left-panel {
-        overflow: visible;
-        z-index: 20;
+        padding: 0 16px;
+    }
+
+    .logo {
+        font-size: 1.5rem;
+    }
+
+    .right-panel {
+        padding: 28px 16px 38px;
     }
 }
 </style>
 </head>
 <body>
-          <div class="container">
 
- 
+<div class="container">
 
-    <!-- lado branco -->
+    <!-- lado azul -->
 
     <section class="left-panel">
 
-         <canvas id="rainCanvas"></canvas>
+        <canvas id="rainCanvas"></canvas>
 
-        <div>
-            <a href="home.php" class="logo-link"><div class="logo">Crypher.IA</div></a>
-        </div>
+        <a href="home.php" class="logo">Crypher.IA</a>
 
         <!-- troca de tela + menu hambúrguer (só aparecem no celular) -->
         <div class="header-direita">
+
+            <a href="cadastrar.php" class="topo-acao">Cadastrar</a>
 
             <div class="menu-hamb">
                 <button type="button" class="hamb-botao" id="hamb-botao" title="Menu" aria-label="Menu" aria-haspopup="true" aria-expanded="false">
@@ -1033,68 +800,89 @@ a {
 
                 <div class="hamb-dropdown" id="hamb-dropdown">
                     <a href="home.php"><i class="fa-solid fa-house"></i> Home</a>
+                    <a href="cadastrar.php"><i class="fa-solid fa-user-plus"></i> Cadastrar</a>
                 </div>
             </div>
 
-            <a href="cadastrar.php" class="topo-acao">Cadastrar</a>
         </div>
 
         <div class="welcome">
 
+            <span class="selo">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Inteligência Artificial
+            </span>
+
             <h2>
-                Seja bem-vindo ao<br>
-                Crypher IA
+                Que bom te ver<br>
+                no <span>Crypher IA</span>
             </h2>
 
             <p>
-                Acesse sua conta agora!
+                Acesse sua conta agora e continue de onde parou.
             </p>
-                <a href="cadastrar.php" >
 
-            <button class="btn-login">
-                
-                Cadastrar
-              
-            </button>
-                </a>
+            <ul class="destaques">
+                <li><i class="fa-solid fa-bolt"></i> Acesso rápido à sua conta</li>
+                <li><i class="fa-solid fa-shield-halved"></i> Seus dados protegidos</li>
+                <li><i class="fa-solid fa-comments"></i> Suporte direto pela conversa</li>
+            </ul>
+
+            <a href="cadastrar.php" class="btn-login">
+                Criar conta <i class="fa-solid fa-arrow-right"></i>
+            </a>
 
         </div>
 
     </section>
 
-    <!-- lado roxo-azulado -->
+    <!-- lado branco -->
 
     <section class="right-panel">
 
+        <div class="form-area">
 
-        <h1>Faça login</h1>
-
-        <p>Entre na sua conta</p>
-           
-
-
-        <div class="form-card">
+            <div class="form-topo">
+                <h1>Faça login</h1>
+                <p>Entre na sua conta para continuar.</p>
+            </div>
 
             <?php if ($cadastroOk): ?>
-                <div class="aviso aviso-sucesso">Você foi cadastrado! Faça login para continuar.</div>
+                <div class="aviso aviso-sucesso">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>Você foi cadastrado! Faça login para continuar.</span>
+                </div>
             <?php endif; ?>
 
             <?php if ($erroLogin): ?>
-                <div class="aviso aviso-erro"><?= htmlspecialchars($erroLogin) ?></div>
+                <div class="aviso aviso-erro">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span><?= htmlspecialchars($erroLogin) ?></span>
+                </div>
             <?php endif; ?>
 
             <form method="post" autocomplete="off" novalidate>
 
-              
+                <div class="campo">
+                    <label for="email">E-mail</label>
+                    <div class="campo-input">
+                        <i class="fa-solid fa-envelope icone"></i>
+                        <input type="email" id="email" name="email" autocomplete="off" placeholder="seu@email.com">
+                    </div>
+                </div>
 
-                <label>E-mail:</label>
-                <input type="email" name="email" autocomplete="off">
+                <div class="campo">
+                    <label for="senha">Senha</label>
+                    <div class="campo-input campo-senha">
+                        <i class="fa-solid fa-lock icone"></i>
+                        <input type="password" id="senha" name="senha" autocomplete="new-password" placeholder="Sua senha">
+                        <button type="button" class="ver-senha" id="ver-senha" aria-label="Mostrar senha" title="Mostrar senha">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
 
-                <label>Senha:</label>
-                <input type="password" name="senha" autocomplete="new-password">
-
-                <button type="submit" class="btn-cadastrar" >
-                    Login
+                <button type="submit" class="btn-entrar">
+                    Entrar
                 </button>
 
             </form>
@@ -1105,19 +893,11 @@ a {
 
 </div>
 
-<script>
 
+<script>
+/* ===== Chuvinha (painel azul) ===== */
 const canvas = document.getElementById("rainCanvas");
 const ctx = canvas.getContext("2d");
-
-function resizeCanvas(){
-
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
-
-}
-
-resizeCanvas();
 
 const shapes = [
     "◦",
@@ -1134,7 +914,7 @@ const shapes = [
     "AI"
 ];
 
-const drops = [];
+let drops = [];
 
 function createDrop(){
 
@@ -1148,9 +928,23 @@ function createDrop(){
 
 }
 
-for(let i = 0; i < 45; i++){
-    drops.push(createDrop());
+function resizeCanvas(){
+
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+
+    // quantidade proporcional ao tamanho do painel
+    const quantidade = Math.max(14, Math.min(60, Math.round((canvas.width * canvas.height) / 14000)));
+
+    drops = [];
+
+    for(let i = 0; i < quantidade; i++){
+        drops.push(createDrop());
+    }
+
 }
+
+resizeCanvas();
 
 function draw(){
 
@@ -1161,9 +955,10 @@ function draw(){
         canvas.height
     );
 
-        drops.forEach((drop,index)=>{
+    drops.forEach((drop,index)=>{
 
         ctx.fillStyle = "#F3BE27";
+        ctx.globalAlpha = 0.9;
         ctx.font = `${drop.size}px Poppins`;
 
         ctx.fillText(
@@ -1185,6 +980,8 @@ function draw(){
 
     });
 
+    ctx.globalAlpha = 1;
+
     requestAnimationFrame(draw);
 }
 
@@ -1195,7 +992,7 @@ window.addEventListener(
     resizeCanvas
 );
 
-// Faz as mensagens de aviso (erro/sucesso) do login somem sozinhas após 7s
+// Faz as mensagens de aviso (erro/sucesso) do login sumirem sozinhas após 7s
 document.querySelectorAll('.aviso').forEach(function (aviso) {
     setTimeout(function () {
         aviso.style.opacity = '0';
@@ -1209,8 +1006,8 @@ document.querySelectorAll('.aviso').forEach(function (aviso) {
         }, { once: true });
     }, 7000);
 });
-
 </script>
+
 <script>
 /* ===== Menu hambúrguer (celular) ===== */
 (() => {
@@ -1244,6 +1041,20 @@ document.querySelectorAll('.aviso').forEach(function (aviso) {
 
     window.addEventListener('resize', () => {
         if (window.innerWidth > 900) fechar();
+    });
+})();
+
+/* ===== Mostrar / ocultar senha ===== */
+(() => {
+    const botao = document.getElementById('ver-senha');
+    const campo = document.getElementById('senha');
+    if (!botao || !campo) return;
+
+    botao.addEventListener('click', () => {
+        const mostrar = campo.type === 'password';
+        campo.type = mostrar ? 'text' : 'password';
+        botao.querySelector('i').className = mostrar ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+        botao.setAttribute('aria-label', mostrar ? 'Ocultar senha' : 'Mostrar senha');
     });
 })();
 </script>

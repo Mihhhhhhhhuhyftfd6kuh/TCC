@@ -828,8 +828,8 @@ a { text-decoration:none; color:inherit; }
     <nav>
         <a href="contato/conversa.php" onclick="Verlogar('contato/conversa.php'); return false;">Contato</a>
 
-        <a href="painel_api.php" onclick="Verlogar('painel_api.php'); return false;">IA</a>
-
+        <a href="painel_api.php" onclick="Verlogar('painel_api.php'); return false;">IA</a>   
+        
         <a href="#sobre">Sobre nós</a>
     </nav>
 
@@ -1245,10 +1245,10 @@ a { text-decoration:none; color:inherit; }
 
     <div class="linha-footer"></div>
 
-    <div class="footer-links">
-        <a href="#">Termos de Uso</a>
-        <a href="#">Política de Privacidade</a>
-    </div>
+  <div class="footer-links">
+    <a href="termos.php">Termos de Uso</a>
+    <a href="privacidade.php">Política de Privacidade</a>
+</div>
 
 </footer>
 

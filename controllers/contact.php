@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/crypto.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -52,6 +53,14 @@ if (session_status() === PHP_SESSION_NONE) {
         $stmt->bindparam(':user', $usuario);
         $stmt->bindparam(':admin', $admin);
         $stmt->execute();
+        $conversa = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+foreach ($conversa as &$msg) {
+    $msg['mensagem'] = descriptografarMensagem($msg['mensagem']);
+}
+unset($msg);
+
+return $conversa;
         return $conversa = $stmt->fetchAll(PDO::FETCH_ASSOC); 
 
     }}
@@ -81,7 +90,7 @@ function apagar_conversa(int $id_usuario){
     if(empty(trim($mensagem)) && $arquivoUrl === null){
         return false;
     }
-
+    $mensagem = criptografarMensagem($mensagem);
     if($id_destinatario === null){
         if($_SESSION['id'] != 1){
             $id_destinatario = 1;

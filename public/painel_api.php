@@ -40,7 +40,18 @@ if ($conversaId === null || !conversaPertenceAoUsuario($conversaId, $usuarioId))
 
 $historico = buscarAnalisesPorConversa($conversaId);
 
-// Resumo de cada conversa pra mostrar como prévia na sidebar (1 -- sidebar mais rica)
+// Título da conversa atual (aparece na barra do chat)
+$tituloAtual = 'Nova conversa';
+foreach ($conversas as $c) {
+    if ((int) $c['id'] === $conversaId) {
+        $t = trim($c['titulo'] ?? '');
+        if ($t !== '') {
+            $tituloAtual = $t;
+        }
+        break;
+    }
+}
+
 // Ícone (Font Awesome) do anexo conforme a extensão do arquivo
 function iconeAnexo(string $nome): string {
     $ext = strtolower(pathinfo($nome, PATHINFO_EXTENSION));
@@ -50,12 +61,50 @@ function iconeAnexo(string $nome): string {
     return 'fa-file-code';
 }
 
+// Resumo de cada conversa pra mostrar como prévia na sidebar
 function resumoConversa(array $c): string {
     $titulo = trim($c['titulo'] ?? '');
     if ($titulo === '' || $titulo === 'Nova conversa') {
         return 'Sem mensagens ainda';
     }
     return $titulo;
+}
+
+// Rótulo de cada gravidade
+function rotuloSev(string $s): string {
+    $mapa = ['critica' => 'Crítica', 'alta' => 'Alta', 'media' => 'Média', 'baixa' => 'Baixa'];
+    return $mapa[$s] ?? ucfirst($s);
+}
+
+// Nota de segurança (0 a 100): cada falha desconta pontos conforme a gravidade
+function pontuacaoSeguranca(array $vulns): int {
+    $peso = ['critica' => 35, 'alta' => 22, 'media' => 12, 'baixa' => 5];
+    $p = 100;
+    foreach ($vulns as $v) {
+        $s = strtolower($v['severidade'] ?? 'baixa');
+        $p -= $peso[$s] ?? 5;
+    }
+    return max(0, $p);
+}
+
+function corPontuacao(int $p): string {
+    if ($p >= 80) return '#1f9d55';
+    if ($p >= 50) return '#e08a00';
+    return '#d93a3f';
+}
+
+// Medidor circular da nota de segurança
+function gaugeHtml(int $p): string {
+    $c = 163.36;
+    $dash = round($p / 100 * $c, 2);
+    $cor = corPontuacao($p);
+    return '<div class="gauge" style="--cor:' . $cor . '" title="Nota de segurança: ' . $p . ' de 100">'
+        . '<svg viewBox="0 0 64 64" aria-hidden="true">'
+        . '<circle class="gauge-fundo" cx="32" cy="32" r="26"></circle>'
+        . '<circle class="gauge-valor" cx="32" cy="32" r="26" style="stroke-dasharray:' . $dash . ' ' . $c . '"></circle>'
+        . '</svg>'
+        . '<span class="gauge-num">' . $p . '</span>'
+        . '</div>';
 }
 ?>
 <!DOCTYPE html>
@@ -71,11 +120,10 @@ function resumoConversa(array $c): string {
     <link rel="stylesheet" href="../assets/css/analisador.css">
     <link rel="icon" type="image/x-icon" href="../assets/img/mascote_s_fundo.png">
 
-</head>
 <style>
-    /* =========================================
+/* =========================================
    CRYPHER.IA - ANALISADOR DE CÓDIGO
-   CHAT EM TELA CHEIA
+   Visual limpo e profissional
 ========================================= */
 
 * {
@@ -88,18 +136,15 @@ function resumoConversa(array $c): string {
 :root {
     --azul: #4348D9;
     --azul-escuro: #3539b8;
+    --azul-suave: #F0F1FF;
     --amarelo: #F3BE27;
+    --fundo: #F6F7FB;
     --branco: #ffffff;
-    --fundo: #f5f6ff;
-    --texto: #202020;
-    --cinza: #777;
-    --borda: #e5e5ee;
+    --texto: #1b1d2e;
+    --texto-suave: #6b6d85;
+    --borda: #E6E7F1;
+    --largura-chat: 860px;
 }
-
-
-/* =========================================
-   PÁGINA (ocupa 100% da janela, sem rolagem)
-========================================= */
 
 html,
 body {
@@ -110,11 +155,16 @@ body {
 
 body {
     height: 100dvh;              /* evita problema com a barra do navegador no celular */
-    background: var(--azul);
-    color: var(--texto);
 
     display: flex;
     flex-direction: column;
+
+    background: var(--fundo);
+    color: var(--texto);
+}
+
+a {
+    color: inherit;
 }
 
 
@@ -123,36 +173,32 @@ body {
 ========================================= */
 
 header {
+    position: relative;
+    z-index: 30;
+
     width: 100%;
-    height: 78px;
+    height: 64px;
     flex-shrink: 0;
 
-    padding: 0 55px;
-
-    background: var(--azul);
+    padding: 0 32px;
 
     display: flex;
     align-items: center;
 
-    position: relative;
-    z-index: 10;
-
-    box-shadow: 0 5px 20px rgba(0, 0, 0, .12);
+    background: var(--azul);
 }
 
 .logo {
+    flex-shrink: 0;
+
     color: #fff;
 
-    font-size: 2rem;
+    font-size: 1.7rem;
     font-weight: 700;
-
     letter-spacing: -.5px;
 
     text-decoration: none;
-
-    flex-shrink: 0;
 }
-
 
 /* menu central */
 
@@ -166,41 +212,29 @@ header nav {
 
     display: flex;
     align-items: center;
-
-    gap: 12px;
+    gap: 6px;
 }
 
 header nav a {
-    color: rgba(255, 255, 255, .9);
-
-    text-decoration: none;
-
-    font-size: .9rem;
-    font-weight: 600;
-
-    padding: 10px 17px;
+    padding: 8px 18px;
 
     border-radius: 999px;
 
-    transition:
-        background .25s ease,
-        color .25s ease,
-        transform .25s ease;
+    color: rgba(255, 255, 255, .9);
+
+    font-size: .86rem;
+    font-weight: 500;
+
+    text-decoration: none;
+
+    transition: background .2s ease;
 }
 
 header nav a:hover {
-    background: var(--);
-    color: white;
-
-    
+    background: rgba(255, 255, 255, .15);
 }
 
-nav a:hover{
-    opacity:.7;
-}
-
-
-/* bolinha da conta (canto direito) */
+/* lado direito: hambúrguer (celular) + bolinha da conta */
 
 .header-direita {
     position: relative;
@@ -209,51 +243,50 @@ nav a:hover{
 
     display: flex;
     align-items: center;
-
-    gap: 14px;
+    gap: 12px;
 }
 
 .conta-menu {
     position: relative;
-
     flex-shrink: 0;
 }
 
 .conta-botao {
-    width: 46px;
-    height: 46px;
+    width: 40px;
+    height: 40px;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
-    background: #fff;
-    color: var(--azul);
-
     border: none;
     border-radius: 50%;
 
+    background: #fff;
+    color: var(--azul);
+
     font-family: inherit;
+    font-size: 1rem;
     font-weight: 700;
-    font-size: 1.15rem;
     line-height: 1;
 
     text-transform: uppercase;
 
     cursor: pointer;
 
-    box-shadow: 0 4px 12px rgba(0, 0, 0, .18);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .15);
 
-    transition: .3s ease;
+    transition: transform .2s ease, box-shadow .2s ease;
 }
 
 .conta-botao:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 
-    box-shadow: 0 8px 18px rgba(0, 0, 0, .25);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, .2);
 }
 
-.conta-dropdown {
+.conta-dropdown,
+.hamb-dropdown {
     display: none;
 
     position: absolute;
@@ -274,14 +307,15 @@ nav a:hover{
     z-index: 200;
 }
 
-.conta-dropdown.ativo {
+.conta-dropdown.ativo,
+.hamb-dropdown.ativo {
     display: block;
 }
 
-.conta-dropdown a {
+.conta-dropdown a,
+.hamb-dropdown a {
     display: flex;
     align-items: center;
-
     gap: 10px;
 
     padding: 13px 20px;
@@ -293,10 +327,11 @@ nav a:hover{
 
     text-decoration: none;
 
-    transition: .2s ease;
+    transition: background .2s ease;
 }
 
-.conta-dropdown a i {
+.conta-dropdown a i,
+.hamb-dropdown a i {
     width: 16px;
 
     text-align: center;
@@ -304,157 +339,196 @@ nav a:hover{
     color: var(--azul);
 }
 
-.conta-dropdown a:hover {
+.conta-dropdown a:hover,
+.hamb-dropdown a:hover {
     background: #f2f2f2;
+}
+
+/* hambúrguer: só no celular */
+
+.menu-hamb {
+    position: relative;
+
+    display: none;
+    flex-shrink: 0;
+}
+
+.hamb-botao {
+    width: 40px;
+    height: 40px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+    border-radius: 12px;
+
+    background: rgba(255, 255, 255, .18);
+    color: #fff;
+
+    font-size: 1.05rem;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition: background .2s ease;
+}
+
+.hamb-botao[aria-expanded="true"] {
+    background: rgba(255, 255, 255, .32);
 }
 
 
 /* =========================================
-   MAIN (preenche tudo que sobra abaixo do header)
+   MAIN + LAYOUT (histórico + chat)
 ========================================= */
 
 main {
     flex: 1;
-    min-height: 0;               /* essencial: os filhos rolam em vez de estourar */
+    min-height: 0;
 
     width: 100%;
-    max-width: none;
-
-    margin: 0;
-    padding: 20px 25px;
 
     display: flex;
     flex-direction: column;
 }
 
-
-/* =========================================
-   TÍTULO (opcional)
-========================================= */
-
-.titulo-pagina {
-    flex-shrink: 0;
-
-    margin-bottom: 15px;
-}
-
-.titulo-pagina h1 {
-    color: #fff;
-
-    font-size: 2rem;
-    font-weight: 600;
-
-    line-height: 1.15;
-
-    margin-bottom: 6px;
-}
-
-.titulo-pagina p {
-    max-width: 750px;
-
-    color: rgba(255, 255, 255, .8);
-
-    font-size: .9rem;
-    line-height: 1.6;
-}
-
-
-/* =========================================
-   LAYOUT (sidebar + chat)
-========================================= */
-
 .layout {
+    position: relative;
+
     flex: 1;
     min-height: 0;
 
-    width: 100%;
-
     display: grid;
 
-    grid-template-columns: 285px minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr);   /* a linha não passa da altura disponível */
+    grid-template-columns: 0 minmax(0, 1fr);        /* histórico fechado */
+    grid-template-rows: minmax(0, 1fr);
 
-    gap: 20px;
+    transition: grid-template-columns .3s ease;
+}
+
+.layout.historico-aberto {
+    grid-template-columns: 290px minmax(0, 1fr);    /* histórico aberto */
+}
+
+.historico-overlay {
+    display: none;
 }
 
 
 /* =========================================
-   SIDEBAR
+   HISTÓRICO (sidebar)
 ========================================= */
 
 .sidebar {
     width: 100%;
     height: 100%;
-    min-height: 0;
+    min-width: 0;
 
     background: #fff;
 
-    border: 1px solid var(--borda);
-    border-radius: 20px;
+    border-right: 1px solid var(--borda);
 
-    padding: 18px;
+    overflow: hidden;
 
-    box-shadow: 0 8px 25px rgba(45, 45, 100, .07);
-
-    overflow-y: auto;            /* só a lista de conversas rola */
+    visibility: hidden;                              /* fechado */
 }
 
+.layout.historico-aberto .sidebar {
+    padding: 18px 14px;
 
-/* nova conversa */
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    visibility: visible;
+}
+
+.historico-topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 14px;
+    padding: 0 6px;
+}
+
+.historico-topo h3 {
+    color: var(--texto);
+
+    font-size: .8rem;
+    font-weight: 600;
+
+    letter-spacing: .6px;
+    text-transform: uppercase;
+}
+
+.btn-fechar-historico {
+    width: 30px;
+    height: 30px;
+
+    border: none;
+    border-radius: 8px;
+
+    background: transparent;
+    color: #9a9cb2;
+
+    cursor: pointer;
+
+    transition: background .2s ease, color .2s ease;
+}
+
+.btn-fechar-historico:hover {
+    background: var(--fundo);
+    color: var(--texto);
+}
+
+.sidebar > form {
+    display: block;
+    width: 100%;
+}
 
 .btn-nova-conversa {
     width: 100%;
-    height: 48px;
+    height: 44px;
 
-    border: none;
-    border-radius: 999px;
-
-    background: var(--amarelo);
-    color: #222;
-
-    font-family: inherit;
-    font-size: .9rem;
-    font-weight: 700;
-
-    cursor: pointer;
+    margin-bottom: 16px;
 
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
 
-    margin-bottom: 18px;
+    border: none;
+    border-radius: 12px;
 
-    box-shadow: 0 7px 18px rgba(243, 190, 39, .2);
+    background: var(--amarelo);
+    color: #222;
 
-    transition:
-        transform .25s ease,
-        box-shadow .25s ease;
+    font-family: inherit;
+    font-size: .86rem;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: background .2s ease, transform .2s ease;
 }
 
 .btn-nova-conversa:hover {
-    transform: translateY(-2px);
+    background: #f6c944;
 
-    box-shadow: 0 10px 22px rgba(243, 190, 39, .3);
+    transform: translateY(-1px);
 }
-
-
-/* sidebar vazia */
 
 .sidebar-vazia {
     padding: 25px 10px;
 
     text-align: center;
 
-    color: #999;
+    color: #9a9cb2;
 
     font-size: .82rem;
 }
-
-
-/* =========================================
-   CONVERSAS
-========================================= */
 
 .conversa-item {
     position: relative;
@@ -464,19 +538,19 @@ main {
     display: flex;
     align-items: center;
 
-    margin-bottom: 7px;
+    margin-bottom: 3px;
 
-    border-radius: 13px;
+    border-radius: 10px;
 
     transition: background .2s ease;
 }
 
 .conversa-item:hover {
-    background: #f4f4fc;
+    background: var(--fundo);
 }
 
 .conversa-item.ativa {
-    background: rgba(67, 72, 217, .1);
+    background: var(--azul-suave);
 }
 
 .conversa-link {
@@ -485,38 +559,24 @@ main {
 
     display: flex;
     align-items: center;
-
     gap: 11px;
 
-    padding: 11px;
+    padding: 10px 12px;
 
     text-decoration: none;
-
     color: inherit;
 }
 
 .conversa-icone {
     flex-shrink: 0;
 
-    width: 34px;
-    height: 34px;
+    color: #a3a5bb;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border-radius: 10px;
-
-    background: #eeeeff;
-
-    color: var(--azul);
-
-    font-size: .8rem;
+    font-size: .85rem;
 }
 
 .conversa-item.ativa .conversa-icone {
-    background: var(--azul);
-    color: #fff;
+    color: var(--azul);
 }
 
 .conversa-texto {
@@ -524,75 +584,33 @@ main {
 
     display: flex;
     flex-direction: column;
-
-    gap: 2px;
+    gap: 1px;
 }
 
 .conversa-titulo {
     display: block;
 
-    max-width: 165px;
+    max-width: 200px;
 
     overflow: hidden;
-
     white-space: nowrap;
     text-overflow: ellipsis;
 
-    color: #333;
+    color: var(--texto);
 
     font-size: .82rem;
+    font-weight: 500;
+}
+
+.conversa-item.ativa .conversa-titulo {
+    color: var(--azul);
     font-weight: 600;
 }
 
 .conversa-data {
-    color: #999;
+    color: #a3a5bb;
 
     font-size: .68rem;
-}
-
-
-/* renomear */
-
-.btn-renomear {
-    width: 32px;
-    height: 32px;
-
-    margin-right: 7px;
-
-    border: none;
-    border-radius: 9px;
-
-    background: transparent;
-
-    color: #999;
-
-    cursor: pointer;
-
-    transition:
-        background .2s ease,
-        color .2s ease;
-}
-
-.btn-renomear:hover {
-    background: var(--amarelo);
-    color: #222;
-}
-
-.input-renomear {
-    flex: 1;
-    min-width: 0;
-
-    height: 38px;
-
-    border: 2px solid var(--azul);
-    border-radius: 9px;
-
-    outline: none;
-
-    padding: 0 10px;
-
-    font-family: inherit;
-    font-size: .78rem;
 }
 
 
@@ -607,92 +625,234 @@ main {
     min-width: 0;
     min-height: 0;
 
-    background: #fff;
-
-    border: 1px solid var(--borda);
-    border-radius: 20px;
-
-    box-shadow: 0 8px 25px rgba(45, 45, 100, .07);
-
     display: flex;
     flex-direction: column;
 
     overflow: hidden;
+
+    background: var(--fundo);
 }
 
-.chat-marca-dagua {
-    position: absolute;
+/* barra da conversa */
 
-    width: 280px;
-    height: 280px;
+.chat-topo {
+    flex-shrink: 0;
 
-    right: -100px;
-    top: -100px;
+    height: 54px;
+
+    padding: 0 24px;
+
+    display: flex;
+    align-items: center;
+    gap: 14px;
+
+    background: #fff;
+
+    border-bottom: 1px solid var(--borda);
+}
+
+.btn-historico {
+    flex-shrink: 0;
+
+    height: 34px;
+
+    padding: 0 14px;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    border: 1px solid var(--borda);
+    border-radius: 9px;
+
+    background: #fff;
+    color: var(--texto);
+
+    font-family: inherit;
+    font-size: .76rem;
+    font-weight: 500;
+
+    cursor: pointer;
+
+    transition: background .2s ease, border-color .2s ease;
+}
+
+.btn-historico i {
+    color: var(--azul);
+}
+
+.btn-historico:hover {
+    background: var(--fundo);
+}
+
+/* com o histórico aberto no computador, o botão some (existe o X no painel) */
+@media (min-width: 769px) {
+    .layout.historico-aberto .btn-historico {
+        display: none;
+    }
+}
+
+.chat-titulo {
+    min-width: 0;
+
+    color: var(--texto);
+
+    font-size: .88rem;
+    font-weight: 600;
+}
+
+.chat-titulo span {
+    display: block;
+
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.status-ia {
+    margin-left: auto;
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    color: var(--texto-suave);
+
+    font-size: .72rem;
+    font-weight: 500;
+}
+
+.status-ia i {
+    width: 7px;
+    height: 7px;
 
     border-radius: 50%;
 
-    background: rgba(67, 72, 217, .035);
-
-    pointer-events: none;
+    background: #1f9d55;
 }
 
 
-/* chat vazio */
+/* =========================================
+   TELA VAZIA
+========================================= */
 
 .chat-vazio {
     flex: 1;
     min-height: 0;
 
+    overflow-y: auto;
+
     display: flex;
     flex-direction: column;
-
     justify-content: center;
     align-items: center;
 
     text-align: center;
 
-    padding: 40px;
+    padding: 24px;
 }
 
-.chat-vazio > i {
-    width: 72px;
-    height: 72px;
+.vazio-mascote {
+    width: 84px;
+    height: 84px;
+
+    margin-bottom: 18px;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
-    margin-bottom: 18px;
+    border: 1px solid var(--borda);
+    border-radius: 24px;
 
-    border-radius: 22px;
+    background: #fff;
 
-    background: rgba(67, 72, 217, .1);
+    box-shadow: 0 8px 24px rgba(67, 72, 217, .10);
+}
 
-    color: var(--azul);
+.vazio-mascote img {
+    width: 58px;
+    height: 58px;
 
-    font-size: 2rem;
+    object-fit: contain;
 }
 
 .chat-vazio h3 {
     margin-bottom: 8px;
 
-    color: #333;
+    color: var(--texto);
 
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -.3px;
 }
 
-.chat-vazio p {
-    max-width: 480px;
+.chat-vazio > p {
+    max-width: 460px;
 
-    color: #888;
+    color: var(--texto-suave);
 
-    font-size: .85rem;
-    line-height: 1.6;
+    font-size: .9rem;
+    line-height: 1.65;
+}
+
+.sugestoes {
+    max-width: 620px;
+
+    margin-top: 24px;
+
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+
+.chip-sugestao {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 10px 16px;
+
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+
+    background: #fff;
+    color: var(--texto);
+
+    font-family: inherit;
+    font-size: .78rem;
+    font-weight: 500;
+
+    cursor: pointer;
+
+    transition: border-color .2s ease, background .2s ease, transform .2s ease;
+}
+
+.chip-sugestao i {
+    color: var(--azul);
+}
+
+.chip-sugestao:hover {
+    transform: translateY(-1px);
+
+    border-color: var(--azul);
+    background: var(--azul-suave);
+}
+
+.formatos {
+    margin-top: 28px;
+
+    color: #a3a5bb;
+
+    font-size: .72rem;
 }
 
 
-/* área de mensagens (só ela rola) */
+/* =========================================
+   MENSAGENS (só essa área rola)
+========================================= */
 
 .chat {
     flex: 1;
@@ -700,246 +860,547 @@ main {
 
     overflow-y: auto;
 
-    padding: 30px;
+    /* centraliza a coluna de leitura */
+    padding: 28px max(20px, calc((100% - var(--largura-chat)) / 2)) 20px;
 
     display: flex;
     flex-direction: column;
-
-    gap: 18px;
+    gap: 22px;
 }
 
 .chat::-webkit-scrollbar,
-.sidebar::-webkit-scrollbar {
+.sidebar::-webkit-scrollbar,
+.chat-vazio::-webkit-scrollbar {
     width: 6px;
 }
 
 .chat::-webkit-scrollbar-thumb,
-.sidebar::-webkit-scrollbar-thumb {
-    background: #d1d2e8;
+.sidebar::-webkit-scrollbar-thumb,
+.chat-vazio::-webkit-scrollbar-thumb {
+    background: #d6d7e6;
 
     border-radius: 999px;
 }
 
+.msg {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
 
-/* =========================================
-   BALÕES
-========================================= */
+.msg-user {
+    justify-content: flex-end;
+}
+
+.avatar-ia {
+    flex-shrink: 0;
+
+    width: 36px;
+    height: 36px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+
+    background: #fff;
+}
+
+.avatar-ia img {
+    width: 24px;
+    height: 24px;
+
+    object-fit: contain;
+}
+
+/* balão do usuário */
 
 .bubble-user {
-    align-self: flex-end;
+    max-width: min(78%, 640px);
 
-    max-width: 75%;
+    padding: 12px 17px;
 
-    padding: 13px 17px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 
     background: var(--azul);
     color: #fff;
 
-    border-radius: 17px 17px 5px 17px;
+    border-radius: 16px 16px 4px 16px;
 
-    font-size: .86rem;
-    line-height: 1.55;
-
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-
-    box-shadow: 0 5px 15px rgba(67, 72, 217, .15);
+    font-size: .88rem;
+    line-height: 1.6;
 }
 
+.bubble-user .bubble-texto {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+/* cartão da IA */
+
 .bubble-ia {
-    align-self: flex-start;
+    flex: 1;
+    min-width: 0;
 
-    width: min(90%, 800px);
+    max-width: 780px;
 
-    padding: 20px;
+    padding: 20px 22px;
 
-    background: #f7f7fc;
+    background: #fff;
 
-    border: 1px solid #e6e6f2;
-
-    border-radius: 17px 17px 17px 5px;
+    border: 1px solid var(--borda);
+    border-radius: 4px 16px 16px 16px;
 
     color: #333;
 
-    box-shadow: 0 4px 14px rgba(0, 0, 0, .04);
+    box-shadow: 0 1px 2px rgba(27, 29, 46, .04), 0 10px 28px rgba(27, 29, 46, .05);
 }
 
-.bubble-ia .resumo {
-    margin: 12px 0 16px;
 
-    font-size: .88rem;
-    line-height: 1.65;
+/* =========================================
+   RELATÓRIO (dentro do cartão da IA)
+========================================= */
 
-    color: #555;
+.relatorio-topo {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    padding-bottom: 18px;
+    margin-bottom: 16px;
+
+    border-bottom: 1px solid #eef0f6;
+}
+
+.gauge {
+    position: relative;
+
+    flex-shrink: 0;
+
+    width: 64px;
+    height: 64px;
+}
+
+.gauge svg {
+    width: 100%;
+    height: 100%;
+
+    transform: rotate(-90deg);
+}
+
+.gauge circle {
+    fill: none;
+
+    stroke-width: 6;
+    stroke-linecap: round;
+}
+
+.gauge-fundo {
+    stroke: #eceef6;
+}
+
+.gauge-valor {
+    stroke: var(--cor);
+}
+
+.gauge-num {
+    position: absolute;
+    inset: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: var(--cor);
+
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.relatorio-info {
+    min-width: 0;
+}
+
+.relatorio-titulo {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    margin-bottom: 9px;
+
+    color: var(--texto);
+
+    font-size: .95rem;
+    font-weight: 600;
 }
 
 .badge-linguagem {
     display: inline-flex;
     align-items: center;
 
-    padding: 5px 11px;
+    padding: 3px 10px;
 
-    border-radius: 999px;
+    border-radius: 6px;
 
-    background: var(--azul);
-    color: #fff;
+    background: var(--azul-suave);
+    color: var(--azul);
 
-    font-size: .7rem;
+    font-size: .65rem;
     font-weight: 700;
+    letter-spacing: .4px;
 
     text-transform: uppercase;
-
-    letter-spacing: .4px;
 }
 
-
-/* Código corrigido devolvido pela IA */
-.codigo-corrigido {
-    margin-top: 14px;
-    border-radius: 13px;
-    overflow: hidden;
-    border: 1px solid #2b2d42;
-    background: #1e1f2e;
-}
-.codigo-corrigido-topo {
+.chips-sev {
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.chip-sev {
+    display: inline-flex;
     align-items: center;
-    padding: 9px 14px;
-    background: #2b2d42;
-    color: #fff;
-    font-size: .76rem;
-    font-weight: 700;
+    gap: 6px;
+
+    padding: 4px 10px;
+
+    border-radius: 6px;
+
+    background: #f1f2f8;
+    color: #666;
+
+    font-size: .7rem;
+    font-weight: 600;
 }
-.btn-copiar-codigo {
-    border: none;
-    border-radius: 999px;
-    padding: 5px 12px;
-    background: #F3BE27;
-    color: #222;
-    font-size: .72rem;
-    font-weight: 700;
-    cursor: pointer;
+
+.chip-sev::before {
+    content: "";
+
+    width: 7px;
+    height: 7px;
+
+    border-radius: 50%;
+
+    background: currentColor;
 }
-.codigo-corrigido pre {
-    margin: 0;
-    padding: 14px;
-    max-height: 420px;
-    overflow: auto;
-    color: #e8e8f0;
-    font-family: monospace;
-    font-size: .8rem;
-    line-height: 1.55;
-    white-space: pre;
+
+.chip-critica { background: #fdecec; color: #c0282d; }
+.chip-alta    { background: #fff0e0; color: #c2570c; }
+.chip-media   { background: #fff6dc; color: #a96a00; }
+.chip-baixa   { background: #e9f7ee; color: #1a8348; }
+.chip-ok      { background: #e9f7ee; color: #1a8348; }
+
+.bubble-ia .resumo {
+    color: #4a4c60;
+
+    font-size: .88rem;
+    line-height: 1.75;
 }
+
+.secao-titulo {
+    margin: 20px 0 4px;
+
+    color: var(--texto-suave);
+
+    font-size: .7rem;
+    font-weight: 600;
+
+    letter-spacing: .7px;
+    text-transform: uppercase;
+}
+
 
 /* =========================================
-   CARDS DE VULNERABILIDADE
+   FALHAS (itens expansíveis)
 ========================================= */
 
 .card-vuln {
-    position: relative;
+    margin-top: 10px;
 
-    margin-top: 12px;
-
-    padding: 15px 17px;
-
-    border-radius: 13px;
+    border: 1px solid var(--borda);
+    border-left: 3px solid #aaa;
+    border-radius: 12px;
 
     background: #fff;
 
-    border: 1px solid #e5e5e5;
-    border-left: 4px solid #aaa;
+    overflow: hidden;
 }
 
-.card-vuln h4 {
+.card-vuln summary {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 12px;
 
-    gap: 10px;
+    padding: 14px 16px;
 
-    margin-bottom: 8px;
+    list-style: none;
 
-    color: #292929;
+    cursor: pointer;
 
-    font-size: .88rem;
-    font-weight: 700;
+    transition: background .2s ease;
 }
 
-.card-vuln p {
-    color: #666;
-
-    font-size: .8rem;
-    line-height: 1.55;
-
-    margin-bottom: 7px;
+.card-vuln summary::-webkit-details-marker {
+    display: none;
 }
 
-.card-vuln p:last-child {
-    margin-bottom: 0;
+.card-vuln summary:hover {
+    background: #fafbfe;
 }
 
-.card-vuln strong {
-    color: #333;
+.vuln-titulo {
+    flex: 1;
+    min-width: 0;
+
+    color: var(--texto);
+
+    font-size: .86rem;
+    font-weight: 600;
+    line-height: 1.4;
 }
 
 .tag-sev {
     flex-shrink: 0;
 
-    padding: 4px 9px;
+    padding: 3px 10px;
 
-    border-radius: 999px;
+    border-radius: 6px;
 
-    font-size: .63rem;
+    background: #eee;
+    color: #666;
+
+    font-size: .62rem;
     font-weight: 700;
 
     text-transform: uppercase;
+    letter-spacing: .3px;
 }
 
-/* baixa */
-.card-vuln.sev-baixa { border-left-color: green; }
-.tag-baixa { background: #e7f6eb; color: green; }
+.card-vuln summary > i {
+    flex-shrink: 0;
 
-/* média */
-.card-vuln.sev-media { border-left-color: orangered; }
-.tag-media { background: #fff4d5; color: orangered; }
+    color: #a3a5bb;
+    font-size: .7rem;
 
-/* alta */
-.card-vuln.sev-alta { border-left-color: red; }
-.tag-alta { background: #fff0df; color: red; }
+    transition: transform .2s ease;
+}
 
-/* crítica */
-.card-vuln.sev-critica { border-left-color: #d9534f; }
-.tag-critica { background: #ffe6e6; color: #a52c28; }
+.card-vuln[open] summary > i {
+    transform: rotate(180deg);
+}
+
+.vuln-corpo {
+    padding: 0 16px 16px;
+}
+
+.vuln-corpo p {
+    margin-bottom: 12px;
+
+    color: #5a5c72;
+
+    font-size: .82rem;
+    line-height: 1.7;
+}
+
+.vuln-sugestao {
+    display: flex;
+    gap: 11px;
+
+    padding: 12px 14px;
+
+    border-radius: 10px;
+
+    background: var(--azul-suave);
+}
+
+.vuln-sugestao > i {
+    margin-top: 2px;
+
+    color: var(--azul);
+    font-size: .85rem;
+}
+
+.vuln-sugestao strong {
+    display: block;
+
+    margin-bottom: 2px;
+
+    color: var(--azul);
+
+    font-size: .68rem;
+    font-weight: 700;
+
+    letter-spacing: .5px;
+    text-transform: uppercase;
+}
+
+.vuln-sugestao span {
+    color: #3e4160;
+
+    font-size: .8rem;
+    line-height: 1.65;
+}
+
+.card-vuln.sev-baixa   { border-left-color: #1f9d55; }
+.tag-baixa             { background: #e9f7ee; color: #1a8348; }
+
+.card-vuln.sev-media   { border-left-color: #e0a100; }
+.tag-media             { background: #fff6dc; color: #a96a00; }
+
+.card-vuln.sev-alta    { border-left-color: #f2791f; }
+.tag-alta              { background: #fff0e0; color: #c2570c; }
+
+.card-vuln.sev-critica { border-left-color: #d93a3f; }
+.tag-critica           { background: #fdecec; color: #c0282d; }
 
 
 /* =========================================
-   LOADING
+   CÓDIGO CORRIGIDO
 ========================================= */
+
+.codigo-corrigido {
+    margin-top: 20px;
+
+    border-radius: 12px;
+
+    background: #14162a;
+
+    overflow: hidden;
+}
+
+.codigo-corrigido-topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 10px 14px;
+
+    background: #1d2038;
+    color: #c9cbe0;
+
+    font-size: .74rem;
+    font-weight: 600;
+}
+
+.codigo-corrigido-topo span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.codigo-corrigido-topo span i {
+    color: var(--amarelo);
+}
+
+.btn-copiar-codigo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    padding: 5px 12px;
+
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 7px;
+
+    background: transparent;
+    color: #fff;
+
+    font-family: inherit;
+    font-size: .7rem;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: background .2s ease, color .2s ease, border-color .2s ease;
+}
+
+.btn-copiar-codigo:hover {
+    background: var(--amarelo);
+    color: #222;
+
+    border-color: var(--amarelo);
+}
+
+.codigo-corrigido pre {
+    margin: 0;
+    padding: 16px;
+
+    max-height: 420px;
+
+    overflow: auto;
+
+    color: #e8e8f0;
+
+    font-family: monospace;
+    font-size: .8rem;
+    line-height: 1.65;
+
+    white-space: pre;
+}
+
+.codigo-corrigido pre code {
+    font-family: monospace;
+}
+
+
+/* =========================================
+   STATUS / LOADING / ANEXO PENDENTE
+========================================= */
+
+#status,
+.loading-status,
+.anexo-pendente,
+.input-bar,
+.input-dica {
+    width: min(var(--largura-chat), calc(100% - 32px));
+
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#status:empty {
+    display: none;
+}
+
+#status:not(:empty) {
+    margin-bottom: 10px;
+    padding: 11px 16px;
+
+    border: 1px solid #f3c0c3;
+    border-radius: 10px;
+
+    background: #fdecec;
+    color: #b02a37;
+
+    font-size: .8rem;
+}
 
 .loading-status {
     display: none;
 
     align-items: center;
-    justify-content: center;
+    gap: 10px;
 
-    gap: 9px;
+    margin-bottom: 10px;
+    padding: 0 6px;
 
-    padding: 10px;
+    color: var(--texto-suave);
 
-    color: #777;
-
-    font-size: .78rem;
+    font-size: .8rem;
 }
 
 .spinner {
-    width: 15px;
-    height: 15px;
+    width: 16px;
+    height: 16px;
 
-    border: 2px solid #ddd;
+    border: 2px solid #d9daee;
     border-top-color: var(--azul);
-
     border-radius: 50%;
 
     animation: girar .7s linear infinite;
@@ -951,160 +1412,307 @@ main {
     }
 }
 
-
-/* =========================================
-   BARRA DE ENTRADA (fixa embaixo do card)
-========================================= */
-
-.input-bar {
-    width: 100%;
-    min-height: 76px;
-    flex-shrink: 0;
-
-    padding: 13px 16px;
-
-    display: flex;
-    align-items: flex-end;
-
-    gap: 9px;
-
-    background: #fff;
-
-    border-top: 1px solid #ededf4;
+.anexo-pendente {
+    padding: 0 2px 10px;
 }
 
-.btn-anexo {
-    flex-shrink: 0;
-
-    width: 45px;
-    height: 45px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border-radius: 13px;
-
-    background: #f1f1fa;
-
-    color: var(--azul);
-
-    cursor: pointer;
-
-    transition:
-        background .2s ease,
-        color .2s ease,
-        transform .2s ease;
-}
-
-.btn-anexo:hover,
-.btn-anexo.tem-arquivo {
-    background: var(--amarelo);
-    color: #222;
-
-    transform: translateY(-1px);
-}
-
-.btn-anexo input {
+.anexo-pendente[hidden] {
     display: none;
 }
 
-.nome-arquivo {
-    max-width: 150px;
+.anexo-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
 
-    color: #777;
+    max-width: 100%;
 
-    font-size: .7rem;
+    padding: 8px 12px;
+
+    border-radius: 10px;
+
+    font-size: .78rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.anexo-chip i {
+    flex-shrink: 0;
+
+    font-size: 1rem;
+}
+
+.anexo-chip .anexo-nome {
+    min-width: 0;
 
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
 }
 
+.anexo-chip .anexo-tamanho {
+    flex-shrink: 0;
+
+    font-size: .68rem;
+    font-weight: 500;
+    opacity: .75;
+}
+
+/* dentro do balão azul */
+.bubble-user .anexo-chip {
+    align-self: flex-start;
+
+    background: rgba(255, 255, 255, .17);
+    color: #fff;
+}
+
+/* antes de enviar */
+.anexo-pendente .anexo-chip {
+    background: #fff;
+    color: var(--azul);
+
+    border: 1px solid var(--borda);
+}
+
+.anexo-remover {
+    flex-shrink: 0;
+
+    width: 22px;
+    height: 22px;
+    padding: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+    border-radius: 50%;
+
+    background: var(--azul-suave);
+    color: var(--azul);
+
+    cursor: pointer;
+
+    transition: background .2s ease, color .2s ease;
+}
+
+.anexo-remover:hover {
+    background: var(--azul);
+    color: #fff;
+}
+
+.anexo-remover i {
+    font-size: .68rem;
+}
+
+
+/* =========================================
+   BARRA DE ENVIO
+========================================= */
+
+.input-bar {
+    flex-shrink: 0;
+
+    padding: 8px;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    background: #fff;
+
+    border: 1px solid var(--borda);
+    border-radius: 16px;
+
+    box-shadow: 0 6px 22px rgba(27, 29, 46, .07);
+
+    transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.input-bar:focus-within {
+    border-color: var(--azul);
+
+    box-shadow: 0 6px 22px rgba(67, 72, 217, .12), 0 0 0 3px rgba(67, 72, 217, .08);
+}
+
 .input-bar textarea {
     flex: 1;
     min-width: 0;
 
-    min-height: 45px;
+    min-height: 42px;
     max-height: 110px;
+
+    padding: 10px 12px;
+
+    border: none;
+    outline: none;
 
     resize: none;
 
-    padding: 12px 14px;
-
-    border: 2px solid #e5e5ee;
-    border-radius: 14px;
-
-    outline: none;
-
-    background: #fafaff;
-
-    color: #222;
+    background: transparent;
+    color: var(--texto);
 
     font-family: inherit;
-    font-size: .85rem;
-    line-height: 1.4;
-
-    transition:
-        border-color .2s ease,
-        box-shadow .2s ease;
-}
-
-.input-bar textarea:focus {
-    border-color: var(--azul);
-
-    box-shadow: 0 0 0 3px rgba(67, 72, 217, .08);
-
-    background: #fff;
+    font-size: .88rem;
+    line-height: 1.5;
 }
 
 .input-bar textarea::placeholder {
-    color: #999;
+    color: #a3a5bb;
 }
 
-.input-bar > button {
+.btn-anexo {
     flex-shrink: 0;
 
-    height: 45px;
+    height: 42px;
 
-    padding: 0 22px;
+    padding: 0 14px;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    border-radius: 11px;
+
+    background: var(--fundo);
+    color: var(--texto-suave);
+
+    font-size: .8rem;
+    font-weight: 500;
+
+    cursor: pointer;
+
+    transition: background .2s ease, color .2s ease;
+}
+
+.btn-anexo:hover {
+    background: var(--azul-suave);
+    color: var(--azul);
+}
+
+.btn-anexo.tem-arquivo {
+    background: var(--azul-suave);
+    color: var(--azul);
+}
+
+.btn-anexo input {
+    display: none;
+}
+
+.btn-enviar {
+    flex-shrink: 0;
+
+    height: 42px;
+
+    padding: 0 20px;
+
+    display: flex;
+    align-items: center;
+    gap: 9px;
 
     border: none;
-    border-radius: 999px;
+    border-radius: 11px;
 
     background: var(--amarelo);
     color: #222;
 
     font-family: inherit;
-    font-size: .85rem;
-    font-weight: 700;
+    font-size: .84rem;
+    font-weight: 600;
 
     cursor: pointer;
 
-    box-shadow: 0 6px 15px rgba(243, 190, 39, .2);
-
-    transition:
-        transform .2s ease,
-        box-shadow .2s ease;
+    transition: background .2s ease, transform .2s ease;
 }
 
-.input-bar > button:hover {
-    transform: translateY(-2px);
+.btn-enviar:hover {
+    background: #f6c944;
 
-    box-shadow: 0 9px 20px rgba(243, 190, 39, .3);
+    transform: translateY(-1px);
+}
+
+.input-dica {
+    margin-top: 8px;
+    margin-bottom: 12px;
+
+    text-align: center;
+
+    color: #a3a5bb;
+
+    font-size: .68rem;
+}
+
+.input-dica kbd {
+    padding: 1px 6px;
+
+    border: 1px solid var(--borda);
+    border-radius: 5px;
+
+    background: #fff;
+
+    font-family: inherit;
+    font-size: .64rem;
+    font-weight: 600;
 }
 
 
 /* =========================================
-   STATUS / ERRO
+   ARRASTAR E SOLTAR ARQUIVO
 ========================================= */
 
-#status {
-    color: #d9534f;
+.chat-card > .drop-overlay {
+    position: absolute;
+    inset: 0;
 
+    z-index: 20;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(67, 72, 217, .9);
+
+    opacity: 0;
+    pointer-events: none;
+
+    transition: opacity .2s ease;
+}
+
+.drop-overlay.ativo {
+    opacity: 1;
+}
+
+.drop-conteudo {
+    padding: 34px 44px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+
+    border: 2px dashed rgba(255, 255, 255, .7);
+    border-radius: 20px;
+
+    color: #fff;
+
+    text-align: center;
+}
+
+.drop-conteudo i {
+    margin-bottom: 6px;
+
+    color: var(--amarelo);
+    font-size: 2.4rem;
+}
+
+.drop-conteudo strong {
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+.drop-conteudo span {
     font-size: .8rem;
-
-    padding: 0 5px;
+    opacity: .85;
 }
 
 
@@ -1115,23 +1723,20 @@ main {
 @media (max-width: 1050px) {
 
     header {
-        padding: 0 30px;
+        padding: 0 24px;
     }
 
-    main {
-        padding: 18px 20px;
+    .layout.historico-aberto {
+        grid-template-columns: 250px minmax(0, 1fr);
     }
 
-    .layout {
-        grid-template-columns: 240px minmax(0, 1fr);
+    .chat-topo {
+        padding: 0 20px;
     }
 
-    .bubble-user {
-        max-width: 82%;
-    }
-
-    .bubble-ia {
-        width: 92%;
+    .chat {
+        padding-left: 20px;
+        padding-right: 20px;
     }
 }
 
@@ -1142,539 +1747,42 @@ main {
 
 @media (max-width: 768px) {
 
+    /* ---- header compacto: logo + hambúrguer + bolinha ---- */
+
     header {
-        height: auto;
-        min-height: 70px;
+        height: calc(58px + env(safe-area-inset-top));
 
-        padding: 12px 18px;
-
-        gap: 12px;
-
-        justify-content: space-between;
+        padding: env(safe-area-inset-top) 18px 0;
     }
 
     .logo {
-        font-size: 1.6rem;
+        font-size: 1.4rem;
     }
 
-    /* no mobile o menu volta pro fluxo normal */
-    header nav {
-        position: static;
-        transform: none;
-
-        gap: 3px;
+    header > nav {
+        display: none;
     }
 
-    header nav a {
-        padding: 8px 10px;
-
-        font-size: .75rem;
-    }
-
-    .header-direita {
-        gap: 10px;
-    }
-
-    .conta-botao {
-        width: 40px;
-        height: 40px;
-
-        font-size: 1rem;
+    .menu-hamb {
+        display: block;
     }
 
     .conta-botao:hover {
         transform: none;
     }
 
-    .conta-dropdown {
+    .conta-dropdown,
+    .hamb-dropdown {
         top: calc(100% + 8px);
 
         min-width: 180px;
     }
 
-    main {
-        padding: 12px;
-    }
-
-    .titulo-pagina h1 {
-        font-size: 1.6rem;
-    }
-
-    .titulo-pagina p {
-        font-size: .8rem;
-    }
-
-    /* sidebar vira uma faixa no topo e o chat preenche o resto */
-    .layout {
-        display: flex;
-        flex-direction: column;
-
-        gap: 12px;
-    }
-
-    .sidebar {
-        height: auto;
-        max-height: 180px;
-        flex-shrink: 0;
-
-        padding: 12px;
-
-        overflow-x: auto;
-        overflow-y: hidden;
-
-        white-space: nowrap;
-    }
-
-    .sidebar > form {
-        display: inline-block;
-
-        width: 180px;
-
-        vertical-align: middle;
-
-        margin-right: 5px;
-    }
-
-    .btn-nova-conversa {
-        height: 43px;
-
-        margin-bottom: 10px;
-    }
-
-    .sidebar .btn-nova-conversa {
-        width: 180px;
-    }
-
-    .conversa-item {
-        display: inline-flex;
-
-        width: auto;
-        min-width: 180px;
-
-        margin-right: 5px;
-    }
-
-    .chat-card {
-        flex: 1;
-        height: auto;
-        min-height: 0;
-
-        border-radius: 17px;
-    }
-
-    .chat {
-        padding: 20px 14px;
-    }
-
-    .bubble-user {
-        max-width: 88%;
-
-        font-size: .82rem;
-    }
-
-    .bubble-ia {
-        width: 96%;
-
-        padding: 16px;
-    }
-
-    .card-vuln h4 {
-        align-items: flex-start;
-
-        flex-direction: column;
-    }
-
-    .input-bar {
-        padding: 10px;
-
-        gap: 6px;
-    }
-
-    .btn-anexo {
-        width: 42px;
-        height: 42px;
-    }
-
-    .input-bar textarea {
-        min-height: 42px;
-
-        padding: 10px 11px;
-    }
-
-    .input-bar > button {
-        height: 42px;
-
-        padding: 0 16px;
-    }
-}
-
-
-/* =========================================
-   CELULAR PEQUENO
-========================================= */
-
-@media (max-width: 480px) {
-
-    header {
-        flex-direction: column;
-
-        align-items: stretch;
-
-        padding: 12px 15px;
-    }
-
-    .logo {
-        text-align: center;
-
-        font-size: 1.65rem;
-    }
-
-    header nav {
-        width: 100%;
-
-        justify-content: center;
-    }
-
-    header nav a {
-        flex: 1;
-
-        text-align: center;
-
-        font-size: .72rem;
-    }
-
-    main {
-        padding: 10px;
-    }
-
-    .sidebar {
-        max-height: 155px;
-    }
-
-    .chat-card {
-        border-radius: 15px;
-    }
-
-    .chat {
-        padding: 17px 10px;
-    }
-
-    .bubble-user {
-        max-width: 92%;
-
-        padding: 11px 13px;
-
-        font-size: .78rem;
-    }
-
-    .bubble-ia {
-        width: 98%;
-
-        padding: 14px;
-
-        border-radius: 14px;
-    }
-
-    .bubble-ia .resumo {
-        font-size: .78rem;
-    }
-
-    .card-vuln {
-        padding: 13px;
-    }
-
-    .card-vuln p {
-        font-size: .74rem;
-    }
-
-    .input-bar {
-        min-height: 66px;
-
-        padding: 8px;
-    }
-
-    .btn-anexo {
-        width: 39px;
-        height: 39px;
-
-        border-radius: 11px;
-    }
-
-    .input-bar textarea {
-        min-height: 39px;
-
-        font-size: .76rem;
-
-        border-radius: 11px;
-    }
-
-    .input-bar > button {
-        height: 39px;
-
-        padding: 0 13px;
-
-        font-size: .75rem;
-    }
-
-    .nome-arquivo {
-        display: none;
-    }
-}
-
-
-/* =========================================================
-   LAYOUT FINAL (conforme esboço)
-   Header no topo, chat ocupando todo o resto da tela e
-   barra de envio fixa embaixo. Sem sidebar, sem margens.
-   Fica no fim do arquivo para sobrescrever as regras acima.
-========================================================= */
-
-main {
-    padding: 0;
-    background: #fff;
-}
-
-.titulo-pagina {
-    display: none;
-}
-
-.layout {
-    display: block;
-    flex: 1;
-    min-height: 0;
-    gap: 0;
-}
-
-.chat-card {
-    height: 100%;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-}
-
-.chat-marca-dagua {
-    display: none;
-}
-
-.chat {
-    padding: 30px 55px;
-}
-
-/* barra de envio: [ texto .......... ] [Arquivo] [Enviar] */
-.input-bar {
-    align-items: center;
-    padding: 12px 55px;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, .06);
-}
-
-.input-bar textarea   { order: 1; flex: 1; }
-.input-bar .btn-anexo { order: 2; }
-.input-bar .nome-arquivo { order: 2; }
-.input-bar > button   { order: 3; }
-
-/* botão "Arquivo" com largura automática (ícone + texto) */
-.btn-anexo {
-    width: auto;
-    padding: 0 16px;
-    gap: 8px;
-    font-size: .8rem;
-    font-weight: 600;
-}
-
-@media (max-width: 1050px) {
-    .chat      { padding: 25px 30px; }
-    .input-bar { padding: 10px 30px; }
-}
-
-@media (max-width: 768px) {
-    main       { padding: 0; }
-    .chat      { padding: 20px 14px; }
-    .input-bar { padding: 10px 12px; }
-    .chat-card { border-radius: 0; }
-}
-
-
-/* =========================================================
-   HISTÓRICO DE CONVERSAS (aba do lado esquerdo)
-   Desktop: painel lateral que abre/fecha empurrando o chat.
-   Mobile: gaveta que desliza por cima da tela.
-   Estado controlado pela classe .historico-aberto no .layout
-========================================================= */
-
-.layout {
-    display: grid;
-    grid-template-columns: 0 minmax(0, 1fr);      /* fechado */
-    grid-template-rows: minmax(0, 1fr);
-    gap: 0;
-
-    transition: grid-template-columns .3s ease;
-}
-
-.layout.historico-aberto {
-    grid-template-columns: 320px minmax(0, 1fr);  /* aberto */
-}
-
-.sidebar {
-    display: block;
-
-    width: 100%;
-    height: 100%;
-    min-width: 0;
-    max-height: none;
-
-    padding: 0;
-
-    background: #fafaff;
-
-    border: none;
-    border-right: 1px solid var(--borda);
-    border-radius: 0;
-    box-shadow: none;
-
-    overflow: hidden;
-    white-space: normal;
-
-    visibility: hidden;                            /* fechado */
-}
-
-.layout.historico-aberto .sidebar {
-    padding: 18px;
-
-    overflow-y: auto;
-    overflow-x: hidden;
-
-    visibility: visible;
-}
-
-
-/* topo do painel */
-
-.historico-topo {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    margin-bottom: 16px;
-}
-
-.historico-topo h3 {
-    color: #333;
-
-    font-size: 1rem;
-    font-weight: 700;
-}
-
-.btn-fechar-historico {
-    width: 32px;
-    height: 32px;
-
-    border: none;
-    border-radius: 9px;
-
-    background: transparent;
-
-    color: #999;
-
-    cursor: pointer;
-
-    transition:
-        background .2s ease,
-        color .2s ease;
-}
-
-.btn-fechar-historico:hover {
-    background: var(--amarelo);
-    color: #222;
-}
-
-
-/* botão que abre o histórico (canto superior esquerdo do chat) */
-
-.btn-historico {
-    position: absolute;
-
-    top: 14px;
-    left: 20px;
-
-    z-index: 5;
-
-    height: 38px;
-
-    padding: 0 15px;
-
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    border: 1px solid var(--borda);
-    border-radius: 999px;
-
-    background: #fff;
-
-    color: var(--azul);
-
-    font-family: inherit;
-    font-size: .78rem;
-    font-weight: 600;
-
-    cursor: pointer;
-
-    box-shadow: 0 4px 12px rgba(45, 45, 100, .08);
-
-    transition:
-        background .2s ease,
-        color .2s ease,
-        transform .2s ease;
-}
-
-.btn-historico:hover {
-    background: var(--amarelo);
-    color: #222;
-
-    transform: translateY(-1px);
-}
-
-/* com o painel aberto no desktop, o botão de abrir some (existe o X no painel) */
-@media (min-width: 769px) {
-    .layout.historico-aberto .btn-historico {
-        display: none;
-    }
-}
-
-
-/* itens dentro do painel: sempre em lista vertical */
-
-.sidebar > form {
-    display: block;
-    width: 100%;
-    margin: 0;
-}
-
-.sidebar .btn-nova-conversa {
-    width: 100%;
-}
-
-.sidebar .conversa-item {
-    display: flex;
-    width: 100%;
-    min-width: 0;
-    margin-right: 0;
-}
-
-
-/* =========================================
-   MOBILE: histórico vira gaveta
-========================================= */
-
-@media (max-width: 768px) {
+    /* ---- histórico vira gaveta ---- */
 
     .layout,
     .layout.historico-aberto {
         display: block;
-    }
-
-    .chat-card {
-        height: 100%;
     }
 
     .sidebar {
@@ -1685,10 +1793,10 @@ main {
 
         z-index: 50;
 
-        width: min(320px, 85vw);
+        width: min(310px, 85vw);
         height: 100dvh;
 
-        padding: 18px;
+        padding: 18px 14px;
 
         overflow-y: auto;
         overflow-x: hidden;
@@ -1706,294 +1814,131 @@ main {
         box-shadow: 10px 0 30px rgba(0, 0, 0, .25);
     }
 
-    .layout.historico-aberto .btn-historico {
-        display: flex;
+    .layout.historico-aberto .historico-overlay {
+        display: block;
+
+        position: fixed;
+        inset: 0;
+
+        z-index: 40;
+
+        background: rgba(20, 22, 60, .45);
     }
 
-    .btn-historico {
-        top: 10px;
-        left: 12px;
-    }
-}
+    /* ---- barra da conversa ---- */
 
-/* =========================================================
-   PADRÃO DO SITE: bolinha da conta (mobile)
-   Fica depois das outras regras para sobrescrevê-las.
-========================================================= */
-
-@media (max-width: 768px) {
-
-    /* ---- header compacto: logo + bolinha da conta ---- */
-
-    header {
-        flex-direction: row;
-        flex-wrap: nowrap;
-        align-items: center;
-        justify-content: space-between;
-
-        height: calc(58px + env(safe-area-inset-top));
-        min-height: 0;
-
-        padding: env(safe-area-inset-top) 18px 0;
-        gap: 12px;
-
-        box-shadow: none;
-    }
-
-    .logo {
-        font-size: 1.4rem;
-        text-align: left;
-    }
-
-    header > nav {
-        display: none;
-    }
-
-    .header-direita {
+    .chat-topo {
+        padding: 0 12px;
         gap: 10px;
     }
 
-    .conta-botao {
+    .status-ia b {
+        display: none;
+    }
+
+    /* ---- chat ---- */
+
+    .chat {
+        padding: 18px 12px 14px;
+        gap: 18px;
+    }
+
+    .msg {
+        gap: 8px;
+    }
+
+    .avatar-ia {
+        width: 30px;
+        height: 30px;
+
+        border-radius: 10px;
+    }
+
+    .avatar-ia img {
+        width: 20px;
+        height: 20px;
+    }
+
+    .bubble-user {
+        max-width: 88%;
+
+        font-size: .84rem;
+    }
+
+    .bubble-ia {
+        padding: 16px;
+    }
+
+    .relatorio-topo {
+        gap: 13px;
+    }
+
+    .card-vuln summary {
+        padding: 12px 13px;
+        gap: 9px;
+    }
+
+    .vuln-corpo {
+        padding: 0 13px 13px;
+    }
+
+    .chat-vazio {
+        padding: 16px;
+    }
+
+    .chat-vazio h3 {
+        font-size: 1.3rem;
+    }
+
+    .formatos {
+        display: none;
+    }
+
+    /* ---- barra de envio ---- */
+
+    #status,
+    .loading-status,
+    .anexo-pendente,
+    .input-bar {
+        width: calc(100% - 20px);
+    }
+
+    .input-bar {
+        margin-bottom: 10px;
+        padding: 6px;
+
+        border-radius: 14px;
+    }
+
+    .btn-anexo,
+    .btn-enviar {
         width: 40px;
         height: 40px;
 
-        font-size: 1rem;
+        padding: 0;
+
+        justify-content: center;
     }
 
-    .conta-botao:hover {
-        transform: none;
+    .texto-anexo,
+    .texto-enviar {
+        display: none;
     }
 
-    .conta-dropdown {
-        top: calc(100% + 8px);
+    .input-bar textarea {
+        min-height: 40px;
 
-        min-width: 180px;
+        padding: 9px 8px;
+
+        font-size: 16px;      /* evita o zoom automático do iPhone */
     }
 
-}
-
-/* =========================================================
-   ANEXOS (arquivo enviado aparece junto da mensagem)
-========================================================= */
-
-/* o balão agora tem filhos (chip + texto): o pre-wrap passa pro texto */
-.bubble-user {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    white-space: normal;
-}
-
-.bubble-user .bubble-texto {
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-}
-
-.anexo-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-
-    max-width: 100%;
-    padding: 8px 12px;
-
-    border-radius: 11px;
-
-    font-size: .78rem;
-    font-weight: 600;
-    line-height: 1.2;
-}
-
-.anexo-chip i {
-    flex-shrink: 0;
-    font-size: 1.05rem;
-}
-
-.anexo-chip .anexo-nome {
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
-.anexo-chip .anexo-tamanho {
-    flex-shrink: 0;
-    font-size: .68rem;
-    font-weight: 500;
-    opacity: .75;
-}
-
-/* dentro do balão azul */
-.bubble-user .anexo-chip {
-    align-self: flex-start;
-    background: rgba(255, 255, 255, .17);
-    color: #fff;
-}
-
-/* antes de enviar (acima da barra de digitação) */
-.anexo-pendente {
-    padding: 8px 55px 0;
-    background: #fff;
-}
-
-.anexo-pendente[hidden] {
-    display: none;
-}
-
-.anexo-pendente .anexo-chip {
-    background: #f1f1fa;
-    color: var(--azul);
-    border: 1px solid #e0e0f2;
-}
-
-.anexo-remover {
-    flex-shrink: 0;
-
-    width: 22px;
-    height: 22px;
-    padding: 0;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border: none;
-    border-radius: 50%;
-
-    background: rgba(67, 72, 217, .12);
-    color: var(--azul);
-
-    cursor: pointer;
-    transition: background .2s ease, color .2s ease;
-}
-
-.anexo-remover:hover {
-    background: var(--azul);
-    color: #fff;
-}
-
-.anexo-remover i {
-    font-size: .7rem;
-}
-
-@media (max-width: 1050px) {
-    .anexo-pendente { padding: 8px 30px 0; }
-}
-
-@media (max-width: 768px) {
-    .anexo-pendente { padding: 8px 12px 0; }
-}
-
-
-/* mascote no lugar do escudo (chat vazio) */
-.chat-vazio > img {
-    width: 120px;
-    height: 120px;
-
-    margin-bottom: 14px;
-
-    object-fit: contain;
-}
-
-/* =========================================================
-   MENU HAMBÚRGUER (só no celular)
-   Botão ao lado da bolinha da conta; abre uma lista branca
-   igual ao menu do perfil. O ícone vira X quando está aberto.
-========================================================= */
-
-.menu-hamb {
-    display: none;
-    flex-shrink: 0;
-}
-
-.hamb-botao {
-    width: 40px;
-    height: 40px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    background: rgba(255, 255, 255, .18);
-    color: #fff;
-
-    border: none;
-    border-radius: 12px;
-
-    font-size: 1.05rem;
-    line-height: 1;
-
-    cursor: pointer;
-
-    transition: background .2s ease;
-}
-
-.hamb-botao[aria-expanded="true"] {
-    background: rgba(255, 255, 255, .32);
-}
-
-.hamb-dropdown {
-    display: none;
-
-    position: absolute;
-
-    top: calc(100% + 8px);
-    right: 0;
-
-    min-width: 180px;
-
-    background: #fff;
-
-    border-radius: 12px;
-
-    overflow: hidden;
-
-    box-shadow: 0 15px 35px rgba(0, 0, 0, .22);
-
-    z-index: 200;
-}
-
-.hamb-dropdown.ativo {
-    display: block;
-}
-
-.hamb-dropdown a {
-    display: flex;
-    align-items: center;
-
-    gap: 10px;
-
-    padding: 13px 20px;
-
-    color: #222;
-
-    font-size: .9rem;
-    font-weight: 500;
-
-    text-decoration: none;
-
-    transition: .2s ease;
-}
-
-.hamb-dropdown a i {
-    width: 16px;
-
-    text-align: center;
-
-    color: #4348D9;
-}
-
-.hamb-dropdown a:hover {
-    background: #f2f2f2;
-}
-
-@media (max-width: 768px) {
-    .menu-hamb {
-        display: block;
+    .input-dica {
+        display: none;
     }
 }
-
 </style>
+</head>
 <body>
     <header>
         <a href="home.php" class="logo">Crypher.IA</a>
@@ -2010,8 +1955,8 @@ main {
                 </button>
 
                 <div class="hamb-dropdown" id="hamb-dropdown">
-                <a href="home.php"><i class="fa-solid fa-house"></i> Home</a>
-                <a href="<?= $linkContato ?>"><i class="fa-regular fa-comments"></i> Contato</a>
+                    <a href="home.php"><i class="fa-solid fa-house"></i> Home</a>
+                    <a href="<?= $linkContato ?>"><i class="fa-regular fa-comments"></i> Contato</a>
                 </div>
             </div>
 
@@ -2032,9 +1977,11 @@ main {
 
         <div class="layout">
 
+            <div class="historico-overlay" data-toggle-historico></div>
+
             <aside class="sidebar">
                 <div class="historico-topo">
-                    <h3>Histórico</h3>
+                    <h3>Conversas</h3>
                     <button type="button" class="btn-fechar-historico" data-toggle-historico title="Fechar histórico">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
@@ -2053,7 +2000,7 @@ main {
                 <?php foreach ($conversas as $c): ?>
                     <div class="conversa-item <?= ((int)$c['id'] === $conversaId) ? 'ativa' : '' ?>">
                         <a href="?conversa=<?= (int) $c['id'] ?>" class="conversa-link">
-                            <span class="conversa-icone"><i class="fa-solid fa-message"></i></span>
+                            <span class="conversa-icone"><i class="fa-regular fa-message"></i></span>
                             <span class="conversa-texto">
                                 <span class="conversa-titulo"><?= htmlspecialchars(resumoConversa($c)) ?></span>
                                 <span class="conversa-data"><?= htmlspecialchars($c['created_at']) ?></span>
@@ -2063,18 +2010,48 @@ main {
                 <?php endforeach; ?>
             </aside>
 
-            <div class="chat-card">
-                <div class="chat-marca-dagua"></div>
+            <div class="chat-card" id="chat-card">
 
-                <button type="button" class="btn-historico" data-toggle-historico>
-                    <i class="fa-solid fa-clock-rotate-left"></i> Histórico
-                </button>
+                <!-- barra da conversa -->
+                <div class="chat-topo">
+                    <button type="button" class="btn-historico" data-toggle-historico>
+                        <i class="fa-solid fa-clock-rotate-left"></i> Histórico
+                    </button>
+
+                    <div class="chat-titulo">
+                        <span><?= htmlspecialchars($tituloAtual) ?></span>
+                    </div>
+
+                    <div class="status-ia">
+                        <i></i> <b>IA disponível</b>
+                    </div>
+                </div>
 
                 <?php if (count($historico) === 0): ?>
                     <div class="chat-vazio">
-                        <img src="../assets/img/mascote_s_fundo.png" alt="Mascote Crypher.IA">
-                        <h3>Nenhuma análise por aqui ainda</h3>
-                        <p>Cole um trecho de código ou envie um arquivo abaixo para a IA começar a procurar vulnerabilidades.</p>
+                        <div class="vazio-mascote">
+                            <img src="../assets/img/mascote_s_fundo.png" alt="Mascote Crypher.IA">
+                        </div>
+
+                        <h3>Analise a segurança do seu código</h3>
+                        <p>Cole um trecho ou envie um arquivo e a IA vai procurar vulnerabilidades e sugerir as correções.</p>
+
+                        <div class="sugestoes">
+                            <button type="button" class="chip-sugestao" data-prompt="Analise este código procurando SQL Injection:&#10;&#10;">
+                                <i class="fa-solid fa-database"></i> SQL Injection
+                            </button>
+                            <button type="button" class="chip-sugestao" data-prompt="Verifique este código em busca de XSS (Cross-Site Scripting):&#10;&#10;">
+                                <i class="fa-solid fa-code"></i> XSS
+                            </button>
+                            <button type="button" class="chip-sugestao" data-prompt="Revise a segurança deste sistema de login e senhas:&#10;&#10;">
+                                <i class="fa-solid fa-key"></i> Login e senhas
+                            </button>
+                            <button type="button" class="chip-sugestao" data-prompt="Analise a segurança deste upload de arquivos:&#10;&#10;">
+                                <i class="fa-solid fa-file-arrow-up"></i> Upload de arquivos
+                            </button>
+                        </div>
+
+                        <p class="formatos">Formatos aceitos: PHP, JS, Python, SQL, HTML, CSS, JSON, TXT e ZIP</p>
                     </div>
                 <?php else: ?>
                     <div class="chat" id="chat">
@@ -2088,33 +2065,86 @@ main {
                                 if ($arqNome && $textoBolha === 'Arquivo enviado: ' . $arqNome) {
                                     $textoBolha = '';
                                 }
+
+                                $vulns = $r['vulnerabilidades'] ?? [];
+                                $pontuacao = pontuacaoSeguranca($vulns);
+                                $contagem = ['critica' => 0, 'alta' => 0, 'media' => 0, 'baixa' => 0];
+                                foreach ($vulns as $v) {
+                                    $s = strtolower($v['severidade'] ?? 'baixa');
+                                    if (isset($contagem[$s])) {
+                                        $contagem[$s]++;
+                                    }
+                                }
                             ?>
-                            <div class="bubble-user"><?php if ($arqNome): ?><div class="anexo-chip"><i class="fa-solid <?= iconeAnexo($arqNome) ?>"></i><span class="anexo-nome"><?= htmlspecialchars($arqNome) ?></span></div><?php endif; ?><?php if ($textoBolha !== ''): ?><div class="bubble-texto"><?= htmlspecialchars($textoBolha) ?></div><?php endif; ?></div>
 
-                            <div class="bubble-ia">
-                                <?php if (!empty($r['linguagem'])): ?>
-                                    <span class="badge-linguagem"><?= htmlspecialchars($r['linguagem']) ?></span>
-                                <?php endif; ?>
-                                <p class="resumo"><?= htmlspecialchars($r['resumo'] ?? '') ?></p>
+                            <div class="msg msg-user">
+                                <div class="bubble-user"><?php if ($arqNome): ?><div class="anexo-chip"><i class="fa-solid <?= iconeAnexo($arqNome) ?>"></i><span class="anexo-nome"><?= htmlspecialchars($arqNome) ?></span></div><?php endif; ?><?php if ($textoBolha !== ''): ?><div class="bubble-texto"><?= htmlspecialchars($textoBolha) ?></div><?php endif; ?></div>
+                            </div>
 
-                                <?php foreach (($r['vulnerabilidades'] ?? []) as $v): ?>
-                                    <?php $sev = strtolower($v['severidade'] ?? 'baixa'); ?>
-                                    <div class="card-vuln sev-<?= htmlspecialchars($sev) ?>">
-                                        <h4><?= htmlspecialchars($v['titulo'] ?? '') ?> <span class="tag-sev tag-<?= htmlspecialchars($sev) ?>"><?= htmlspecialchars($sev) ?></span></h4>
-                                        <p><?= htmlspecialchars($v['explicacao'] ?? '') ?></p>
-                                        <p><strong>Sugestão:</strong> <?= htmlspecialchars($v['sugestao'] ?? '') ?></p>
-                                    </div>
-                                <?php endforeach; ?>
+                            <div class="msg msg-ia">
+                                <div class="avatar-ia"><img src="../assets/img/mascote_s_fundo.png" alt=""></div>
 
-                                <?php if (!empty($r['codigo_corrigido'])): ?>
-                                    <div class="codigo-corrigido">
-                                        <div class="codigo-corrigido-topo">
-                                            <span>Código corrigido</span>
-                                            <button type="button" class="btn-copiar-codigo">Copiar</button>
+                                <div class="bubble-ia">
+
+                                    <div class="relatorio-topo">
+                                        <?= gaugeHtml($pontuacao) ?>
+                                        <div class="relatorio-info">
+                                            <div class="relatorio-titulo">
+                                                Relatório de segurança
+                                                <?php if (!empty($r['linguagem'])): ?>
+                                                    <span class="badge-linguagem"><?= htmlspecialchars($r['linguagem']) ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="chips-sev">
+                                                <?php foreach ($contagem as $s => $n): ?>
+                                                    <?php if ($n > 0): ?>
+                                                        <span class="chip-sev chip-<?= $s ?>"><?= $n ?> <?= rotuloSev($s) ?></span>
+                                                    <?php endif; ?>
+                                                <?php endforeach; ?>
+                                                <?php if (count($vulns) === 0): ?>
+                                                    <span class="chip-sev chip-ok">Nenhum problema encontrado</span>
+                                                <?php endif; ?>
+                                            </div>
                                         </div>
-                                        <pre><code><?= htmlspecialchars($r['codigo_corrigido']) ?></code></pre>
                                     </div>
-                                <?php endif; ?>
+
+                                    <p class="resumo"><?= htmlspecialchars($r['resumo'] ?? '') ?></p>
+
+                                    <?php if (count($vulns) > 0): ?>
+                                        <div class="secao-titulo">Problemas encontrados</div>
+                                    <?php endif; ?>
+
+                                    <?php foreach ($vulns as $v): ?>
+                                        <?php $sev = strtolower($v['severidade'] ?? 'baixa'); ?>
+                                        <details class="card-vuln sev-<?= htmlspecialchars($sev) ?>" <?= in_array($sev, ['critica', 'alta'], true) ? 'open' : '' ?>>
+                                            <summary>
+                                                <span class="vuln-titulo"><?= htmlspecialchars($v['titulo'] ?? '') ?></span>
+                                                <span class="tag-sev tag-<?= htmlspecialchars($sev) ?>"><?= htmlspecialchars(rotuloSev($sev)) ?></span>
+                                                <i class="fa-solid fa-chevron-down"></i>
+                                            </summary>
+                                            <div class="vuln-corpo">
+                                                <p><?= htmlspecialchars($v['explicacao'] ?? '') ?></p>
+                                                <div class="vuln-sugestao">
+                                                    <i class="fa-solid fa-lightbulb"></i>
+                                                    <div>
+                                                        <strong>Como corrigir</strong>
+                                                        <span><?= htmlspecialchars($v['sugestao'] ?? '') ?></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </details>
+                                    <?php endforeach; ?>
+
+                                    <?php if (!empty($r['codigo_corrigido'])): ?>
+                                        <div class="codigo-corrigido">
+                                            <div class="codigo-corrigido-topo">
+                                                <span><i class="fa-solid fa-code"></i> Código corrigido</span>
+                                                <button type="button" class="btn-copiar-codigo"><i class="fa-regular fa-copy"></i> Copiar</button>
+                                            </div>
+                                            <pre><code><?= htmlspecialchars($r['codigo_corrigido']) ?></code></pre>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -2139,14 +2169,28 @@ main {
                 <form id="form-analise" class="input-bar" enctype="multipart/form-data">
                     <input type="hidden" name="conversa_id" value="<?= $conversaId ?>">
 
+                    <textarea id="texto" name="texto" placeholder="Cole seu código aqui..." rows="1"></textarea>
+
                     <label class="btn-anexo" id="btn-anexo" title="Anexar arquivo">
-                        <i class="fa-solid fa-upload" id="icone-anexo"></i> Arquivo
+                        <i class="fa-solid fa-paperclip" id="icone-anexo"></i> <span class="texto-anexo">Arquivo</span>
                         <input type="file" name="arquivo" id="arquivo" accept=".php,.js,.py,.sql,.html,.css,.txt,.json,.zip">
                     </label>
 
-                    <textarea id="texto" name="texto" placeholder="Cole seu código aqui..." rows="1"></textarea>
-                    <button type="submit">Enviar</button>
+                    <button type="submit" class="btn-enviar" title="Enviar">
+                        <i class="fa-solid fa-paper-plane"></i> <span class="texto-enviar">Enviar</span>
+                    </button>
                 </form>
+
+                <p class="input-dica"><kbd>Enter</kbd> envia &nbsp;•&nbsp; <kbd>Shift</kbd> + <kbd>Enter</kbd> quebra a linha</p>
+
+                <!-- aviso ao arrastar um arquivo para o chat -->
+                <div class="drop-overlay" id="drop-overlay">
+                    <div class="drop-conteudo">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <strong>Solte o arquivo aqui</strong>
+                        <span>PHP, JS, Python, SQL, HTML, CSS, JSON, TXT ou ZIP</span>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -2154,7 +2198,7 @@ main {
 
     <script>
     (() => {
-        const chatCard = document.querySelector('.chat-card');
+        const chatCard = document.getElementById('chat-card');
         let chat = document.getElementById('chat');
         const form = document.getElementById('form-analise');
         const textarea = document.getElementById('texto');
@@ -2167,11 +2211,46 @@ main {
         const btnRemoverAnexo = document.getElementById('anexo-remover');
         const statusEl = document.getElementById('status');
         const loadingStatus = document.getElementById('loading-status');
+        const dropOverlay = document.getElementById('drop-overlay');
 
-        textarea.addEventListener('input', () => {
+        const MASCOTE = '../assets/img/mascote_s_fundo.png';
+        const botaoCopiarHtml = '<i class="fa-regular fa-copy"></i> Copiar';
+
+        /* ---------- campo de texto ---------- */
+
+        function ajustarAlturaTexto() {
             textarea.style.height = 'auto';
             textarea.style.height = Math.min(textarea.scrollHeight, 110) + 'px';
+        }
+
+        textarea.addEventListener('input', ajustarAlturaTexto);
+
+        // Enter envia no computador; Shift+Enter quebra a linha (no celular Enter sempre quebra)
+        textarea.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return;
+            if (window.innerWidth <= 768) return;
+
+            e.preventDefault();
+
+            if (form.requestSubmit) {
+                form.requestSubmit();
+            } else {
+                form.dispatchEvent(new Event('submit', { cancelable: true }));
+            }
         });
+
+        // Sugestões da tela vazia preenchem o campo
+        document.addEventListener('click', (e) => {
+            const chip = e.target.closest('.chip-sugestao');
+            if (!chip) return;
+
+            textarea.value = chip.dataset.prompt || '';
+            ajustarAlturaTexto();
+            textarea.focus();
+            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+        });
+
+        /* ---------- anexos ---------- */
 
         function iconeDoArquivo(nome) {
             const ext = (nome.split('.').pop() || '').toLowerCase();
@@ -2211,6 +2290,49 @@ main {
         inputArquivo.addEventListener('change', atualizarAnexoPendente);
         btnRemoverAnexo.addEventListener('click', limparAnexo);
 
+        /* ---------- arrastar e soltar ---------- */
+
+        let contadorArraste = 0;
+
+        const temArquivo = (e) => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+
+        chatCard.addEventListener('dragenter', (e) => {
+            if (!temArquivo(e)) return;
+            e.preventDefault();
+            contadorArraste++;
+            dropOverlay.classList.add('ativo');
+        });
+
+        chatCard.addEventListener('dragover', (e) => {
+            if (!temArquivo(e)) return;
+            e.preventDefault();
+        });
+
+        chatCard.addEventListener('dragleave', (e) => {
+            if (!temArquivo(e)) return;
+            contadorArraste = Math.max(0, contadorArraste - 1);
+            if (contadorArraste === 0) dropOverlay.classList.remove('ativo');
+        });
+
+        chatCard.addEventListener('drop', (e) => {
+            if (!temArquivo(e)) return;
+            e.preventDefault();
+
+            contadorArraste = 0;
+            dropOverlay.classList.remove('ativo');
+
+            if (e.dataTransfer.files.length > 0) {
+                try {
+                    inputArquivo.files = e.dataTransfer.files;
+                } catch (erro) {
+                    return;
+                }
+                atualizarAnexoPendente();
+            }
+        });
+
+        /* ---------- renderização das mensagens ---------- */
+
         function escapar(str) {
             const div = document.createElement('div');
             div.textContent = str;
@@ -2226,7 +2348,7 @@ main {
                 chat = document.createElement('div');
                 chat.className = 'chat';
                 chat.id = 'chat';
-                chatCard.insertBefore(chat, loadingStatus);
+                chatCard.insertBefore(chat, statusEl);
             }
         }
 
@@ -2234,11 +2356,48 @@ main {
             if (chat) chat.scrollTop = chat.scrollHeight;
         }
 
+        const ROTULOS_SEV = { critica: 'Crítica', alta: 'Alta', media: 'Média', baixa: 'Baixa' };
+
+        // Mesma regra do PHP: cada falha desconta pontos conforme a gravidade
+        function pontuacao(vulns) {
+            const peso = { critica: 35, alta: 22, media: 12, baixa: 5 };
+            let p = 100;
+            vulns.forEach(v => {
+                const s = (v.severidade || 'baixa').toLowerCase();
+                p -= peso[s] ?? 5;
+            });
+            return Math.max(0, p);
+        }
+
+        function corPontuacao(p) {
+            if (p >= 80) return '#1f9d55';
+            if (p >= 50) return '#e08a00';
+            return '#d93a3f';
+        }
+
+        function gaugeHtml(p) {
+            const c = 163.36;
+            const dash = (p / 100 * c).toFixed(2);
+            return `
+                <div class="gauge" style="--cor:${corPontuacao(p)}" title="Nota de segurança: ${p} de 100">
+                    <svg viewBox="0 0 64 64" aria-hidden="true">
+                        <circle class="gauge-fundo" cx="32" cy="32" r="26"></circle>
+                        <circle class="gauge-valor" cx="32" cy="32" r="26" style="stroke-dasharray:${dash} ${c}"></circle>
+                    </svg>
+                    <span class="gauge-num">${p}</span>
+                </div>
+            `;
+        }
+
         // Balão do usuário: arquivo anexado (chip) + texto digitado, se houver
         function renderizarBubbleUser(texto, arquivo) {
             garantirChat();
-            const div = document.createElement('div');
-            div.className = 'bubble-user';
+
+            const msg = document.createElement('div');
+            msg.className = 'msg msg-user';
+
+            const bolha = document.createElement('div');
+            bolha.className = 'bubble-user';
 
             if (arquivo) {
                 const chip = document.createElement('div');
@@ -2247,48 +2406,94 @@ main {
                 const icone = document.createElement('i');
                 icone.className = 'fa-solid ' + iconeDoArquivo(arquivo.name);
 
-                const nome = document.createElement('span');
-                nome.className = 'anexo-nome';
-                nome.textContent = arquivo.name;
+                const nomeArq = document.createElement('span');
+                nomeArq.className = 'anexo-nome';
+                nomeArq.textContent = arquivo.name;
 
                 const tamanho = document.createElement('span');
                 tamanho.className = 'anexo-tamanho';
                 tamanho.textContent = formatarTamanho(arquivo.size);
 
-                chip.append(icone, nome, tamanho);
-                div.appendChild(chip);
+                chip.append(icone, nomeArq, tamanho);
+                bolha.appendChild(chip);
             }
 
             if (texto) {
                 const t = document.createElement('div');
                 t.className = 'bubble-texto';
                 t.textContent = texto;
-                div.appendChild(t);
+                bolha.appendChild(t);
             }
 
-            chat.appendChild(div);
-            return div;
+            msg.appendChild(bolha);
+            chat.appendChild(msg);
+
+            return msg;   // quem chama remove o conjunto inteiro se der erro
         }
 
         function renderizarBubbleIA(resultado) {
             garantirChat();
-            const div = document.createElement('div');
-            div.className = 'bubble-ia';
 
-            let html = '';
-            if (resultado.linguagem) {
-                html += `<span class="badge-linguagem">${escapar(resultado.linguagem)}</span>`;
+            const vulns = resultado.vulnerabilidades || [];
+            const p = pontuacao(vulns);
+
+            const contagem = { critica: 0, alta: 0, media: 0, baixa: 0 };
+            vulns.forEach(v => {
+                const s = (v.severidade || 'baixa').toLowerCase();
+                if (s in contagem) contagem[s]++;
+            });
+
+            let chips = '';
+            Object.keys(contagem).forEach(s => {
+                if (contagem[s] > 0) {
+                    chips += `<span class="chip-sev chip-${s}">${contagem[s]} ${ROTULOS_SEV[s]}</span>`;
+                }
+            });
+            if (vulns.length === 0) {
+                chips = '<span class="chip-sev chip-ok">Nenhum problema encontrado</span>';
             }
-            html += `<p class="resumo">${escapar(resultado.resumo || '')}</p>`;
 
-            (resultado.vulnerabilidades || []).forEach(v => {
-                const sev = (v.severidade || 'baixa').toLowerCase();
-                html += `
-                    <div class="card-vuln sev-${sev}">
-                        <h4>${escapar(v.titulo || '')} <span class="tag-sev tag-${sev}">${sev}</span></h4>
-                        <p>${escapar(v.explicacao || '')}</p>
-                        <p><strong>Sugestão:</strong> ${escapar(v.sugestao || '')}</p>
+            let html = `
+                <div class="relatorio-topo">
+                    ${gaugeHtml(p)}
+                    <div class="relatorio-info">
+                        <div class="relatorio-titulo">
+                            Relatório de segurança
+                            ${resultado.linguagem ? `<span class="badge-linguagem">${escapar(resultado.linguagem)}</span>` : ''}
+                        </div>
+                        <div class="chips-sev">${chips}</div>
                     </div>
+                </div>
+                <p class="resumo">${escapar(resultado.resumo || '')}</p>
+            `;
+
+            if (vulns.length > 0) {
+                html += '<div class="secao-titulo">Problemas encontrados</div>';
+            }
+
+            vulns.forEach(v => {
+                const sev = escapar((v.severidade || 'baixa').toLowerCase());
+                const rotulo = ROTULOS_SEV[sev] || sev;
+                const aberto = (sev === 'critica' || sev === 'alta') ? 'open' : '';
+
+                html += `
+                    <details class="card-vuln sev-${sev}" ${aberto}>
+                        <summary>
+                            <span class="vuln-titulo">${escapar(v.titulo || '')}</span>
+                            <span class="tag-sev tag-${sev}">${escapar(rotulo)}</span>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </summary>
+                        <div class="vuln-corpo">
+                            <p>${escapar(v.explicacao || '')}</p>
+                            <div class="vuln-sugestao">
+                                <i class="fa-solid fa-lightbulb"></i>
+                                <div>
+                                    <strong>Como corrigir</strong>
+                                    <span>${escapar(v.sugestao || '')}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
                 `;
             });
 
@@ -2296,28 +2501,38 @@ main {
                 html += `
                     <div class="codigo-corrigido">
                         <div class="codigo-corrigido-topo">
-                            <span>Código corrigido</span>
-                            <button type="button" class="btn-copiar-codigo">Copiar</button>
+                            <span><i class="fa-solid fa-code"></i> Código corrigido</span>
+                            <button type="button" class="btn-copiar-codigo">${botaoCopiarHtml}</button>
                         </div>
                         <pre><code>${escapar(resultado.codigo_corrigido)}</code></pre>
                     </div>
                 `;
             }
 
-            div.innerHTML = html;
-            chat.appendChild(div);
+            const msg = document.createElement('div');
+            msg.className = 'msg msg-ia';
+            msg.innerHTML = `
+                <div class="avatar-ia"><img src="${MASCOTE}" alt=""></div>
+                <div class="bubble-ia">${html}</div>
+            `;
+
+            chat.appendChild(msg);
         }
 
         // Botão "Copiar" do código corrigido (funciona nas mensagens do histórico e nas novas)
         document.addEventListener('click', (e) => {
             const btn = e.target.closest('.btn-copiar-codigo');
             if (!btn) return;
+
             const codigo = btn.closest('.codigo-corrigido').querySelector('code').textContent;
+
             navigator.clipboard.writeText(codigo).then(() => {
-                btn.textContent = 'Copiado!';
-                setTimeout(() => btn.textContent = 'Copiar', 1500);
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Copiado!';
+                setTimeout(() => btn.innerHTML = botaoCopiarHtml, 1500);
             });
         });
+
+        /* ---------- envio ---------- */
 
         form.addEventListener('submit', async (evento) => {
             evento.preventDefault();
@@ -2327,7 +2542,7 @@ main {
             if (codigo === '' && !arquivo) return;
 
             statusEl.textContent = '';
-            loadingStatus.style.display = 'flex'; // 5 -- feedback visível durante a análise
+            loadingStatus.style.display = 'flex'; // feedback visível durante a análise
 
             const bolhaUser = renderizarBubbleUser(codigo, arquivo);
             irParaFinal();
@@ -2476,4 +2691,4 @@ main {
 })();
 </script>
 </body>
-</html>
+</html> 
