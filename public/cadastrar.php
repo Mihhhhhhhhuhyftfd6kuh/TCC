@@ -805,7 +805,6 @@ a {
         <!-- troca de tela + menu hambúrguer (só aparecem no celular) -->
         <div class="header-direita">
 
-            <a href="login.php" class="topo-acao">Entrar</a>
 
             <div class="menu-hamb">
                 <button type="button" class="hamb-botao" id="hamb-botao" title="Menu" aria-label="Menu" aria-haspopup="true" aria-expanded="false">
